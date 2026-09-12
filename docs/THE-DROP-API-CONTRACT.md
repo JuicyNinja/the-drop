@@ -443,10 +443,50 @@ Response on limit includes current Fanatics in that lane so the client can offer
 ### `GET /v1/tags`
 Platform taxonomy. **Read-only for all non-admin roles.** No free-text.
 
+Returns the two-level tree. Groups (`parent_id: null`) are browsable chips and are never selectable. Leaves are what merchants and buyers choose.
+
+```
+?lane=local|maker|digital
+?selectable=true            (leaves only — the merchant classification picker)
+```
+
+### `GET /v1/tags/search?q=`
+
+Type-ahead over the taxonomy. Matches `label` and `synonyms`, never drop content.
+
+```json
+{
+  "data": [
+    { "id": "uuid", "label": "Oil Change", "group": "Auto", "matched_on": "label" },
+    { "id": "uuid", "label": "Car Wash",   "group": "Auto", "matched_on": "synonym" }
+  ]
+}
+```
+
+Minimum 2 characters. Returns leaves only, ranked by exact-prefix first, then synonym match, then drop volume in the user's active city. Debounce 150ms client-side; this endpoint will be hit on every keystroke.
+
+**This searches categories, not drops.** There is no free-text search over drop titles or descriptions anywhere in the API, and none may be added — it would reward keyword stuffing and hand merchants a gaming surface.
+
+### `GET /v1/board?tag_id=`
+
+The filtered board. Ranking runs **within the filtered set**, not globally.
+
+This is the core browse behavior: a dry cleaner never competes with a taco drop for board position, because a buyer filtering to Dry Cleaning arrives with intent. Percentage-remaining ordering is the default sort inside a filter, not a global scarcity allocation.
+
+```
+?tag_id=uuid                (single leaf, or a group to include all its leaves)
+?address_id=uuid            (defaults to active address)
+?sort=heat|distance|ending  (default: heat = pct_remaining ascending)
+?cursor= &limit=
+```
+
+Filter state MUST survive navigation — a buyer who filters to Oil Change, opens a drop, and backs out returns to the filtered board, not the front page.
+
 ### `PUT /v1/users/me/tags`
 ```json
 { "tag_ids": ["uuid"] }
 ```
+Leaves only. Selecting a group is rejected with `VALIDATION_ERROR`.
 
 ---
 
@@ -512,11 +552,11 @@ The persistent top-right scoreboard.
     "total_redemptions": 297,
     "whispers": 88,
     "cycle_ends_at": "...",
-    "pooled_at_org_level": false
+    "drops_pooled_org_level": false
   }
 }
 ```
-When `pooled_at_org_level` is true (Superstar, Enterprise), counts are org-wide, not per-location. **This is the one place the billing model forks.**
+When `drops_pooled_org_level` is true (Superstar, Enterprise), counts are org-wide, not per-location. **This is the one place the billing model forks.**
 
 ### `GET /v1/orgs/{id}/locations`
 ### `POST /v1/orgs/{id}/locations`
@@ -532,6 +572,28 @@ Returns `402 ALLOWANCE_EXHAUSTED` when the tier does not cover another location:
       "current_tier": "local_starter",
       "upgrade_options": [
         { "tier": "local_superstar", "max_locations": 8, "price_cents": 79500, "prorated_now_cents": 41200 }
+      ],
+      "enterprise_contact": false
+    }
+  }
+}
+```
+
+The same shape carries the drop-cap case. Options are read from stored per-account limits, **never computed from the tier enum**:
+
+```json
+{
+  "error": {
+    "code": "ALLOWANCE_EXHAUSTED",
+    "message": "You've used all 2 drops this cycle.",
+    "details": {
+      "current_tier": "local_starter",
+      "drops_used": 2,
+      "drops_per_cycle": 2,
+      "cycle_ends_at": "2026-10-08T00:00:00Z",
+      "upgrade_options": [
+        { "tier": "local_limited", "drops_per_cycle": 8,  "price_cents": 14900, "prorated_now_cents": 3200 },
+        { "tier": "local_boss",    "drops_per_cycle": 12, "price_cents": 19900, "prorated_now_cents": 6800 }
       ],
       "enterprise_contact": false
     }

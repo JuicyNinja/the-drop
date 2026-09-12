@@ -46,10 +46,28 @@ create type clout_source as enum ('redemption', 'whisper', 'attributed_share');
 create type org_status as enum ('active', 'past_due', 'suspended', 'delisted', 'cancelled');
 
 create type subscription_tier as enum (
-  'local_starter', 'local_boss', 'local_superstar', 'local_enterprise',
+  'local_starter', 'local_limited', 'local_boss', 'local_superstar', 'local_enterprise',
   'maker_t1', 'maker_t2', 'maker_t3', 'maker_t4'
 );
+```
 
+**Tier is a label, not a limit.** Actual allowances live in `organizations.max_locations`, `drops_per_cycle`, and `drops_pooled_org_level`. Never derive a limit from this enum — Enterprise carries arbitrary values, and tiers get repriced without a migration.
+
+Allowances at time of writing:
+
+| Tier | Locations | Drops/cycle | Pooled | Price |
+|---|---|---|---|---|
+| `local_starter` | 1 | 2 | no | $99 |
+| `local_limited` | 1 | 8 | no | $149 |
+| `local_boss` | 1 | 12 | no | $199 |
+| `local_superstar` | 8 | 64 | **yes** | $795 |
+| `local_enterprise` | custom | custom | custom | custom |
+| `maker_t1` | — | 1 one-time | — | $99 |
+| `maker_t2` | — | 2 | — | $149/mo |
+| `maker_t3` | — | 4 | — | $349/mo |
+| `maker_t4` | — | 8 | — | $795/mo |
+
+```sql
 -- Phase 2
 create type order_status as enum (
   'paid', 'shipped', 'delivered', 'rma_requested', 'rma_issued',
@@ -264,13 +282,25 @@ Incremented when a drop transitions to `scheduled`. **Never decremented** — a 
 ```sql
 create table tags (
   id          uuid primary key default gen_random_uuid(),
+  parent_id   uuid references tags(id),   -- null = top-level group
   slug        text unique not null,
   label       text not null,
-  category    text not null,      -- 'food', 'apparel', 'digital', 'culture', ...
-  lane        lane,               -- null = applies to all lanes
+  synonyms    text[] not null default '{}',
+  lanes       lane[] not null default '{}',   -- empty on group rows
+  selectable  boolean not null default true,  -- false on group rows
   active      boolean not null default true,
-  sort_order  integer not null default 0
+  sort_order  integer not null default 0,
+
+  constraint groups_not_selectable
+    check (parent_id is not null or selectable = false),
+  constraint leaves_have_lanes
+    check (parent_id is null or array_length(lanes, 1) >= 1)
 );
+
+create index on tags (parent_id) where active;
+create index tags_lanes on tags using gin (lanes);
+create index tags_search on tags
+  using gin (to_tsvector('simple', label || ' ' || array_to_string(synonyms, ' ')));
 
 create table user_tags (
   user_id uuid not null references users(id) on delete cascade,
@@ -284,6 +314,56 @@ create table org_tags (
   primary key (org_id, tag_id)
 );
 ```
+
+### 5.1 One taxonomy, two jobs
+
+The same table serves buyer interest matching and merchant classification. This is deliberate: a buyer who marks **Tacos** as an interest and a merchant who classifies as **Tacos** must resolve to the same node, or notification matching and browse filtering will disagree with each other. Two taxonomies cannot be kept in sync by hand and will not be.
+
+### 5.2 Two levels
+
+Top-level rows (`parent_id is null`) are **groups** — browsable chips, never selectable by a merchant or buyer. Leaves are what gets chosen and what type-ahead resolves to.
+
+```
+Food & Drink    → Tacos · Wings · Coffee · Brunch · Pizza · Sushi · BBQ …
+Auto            → Oil Change · Detail · Tires · Car Wash · Body Work …
+Home Services   → Window Washing · Carpet · Lawn · Pressure Wash · Gutters …
+Personal Care   → Barber · Nails · Massage · Lashes · Spa …
+Cleaning        → Dry Cleaning · Laundry · Alterations …
+Entertainment   → Bowling · Golf · Climbing · Escape Room · Arcade …
+Retail          → Jewelry · Apparel · Footwear · Home Goods …
+```
+
+Hundreds of leaves remain usable because nobody scrolls them — they type.
+
+### 5.3 Synonyms are load-bearing
+
+A merchant classified as **Auto Detail** is invisible to a buyer typing "car wash" unless the taxonomy carries the mapping. `synonyms` is what makes type-ahead work, and it is the difference between the filter functioning and not.
+
+Seed every leaf with its common alternates at launch. Admin adds more as search misses surface in the analytics.
+
+### 5.4 One node, many lanes — never duplicated
+
+`lanes` is an **array**, not a single value. A category that exists in more than one lane is **one row**, never two.
+
+Jewelry is a single tag carrying `{local,maker}`. It surfaces under Retail in the Local lane and under Retail in the Maker lane — same node, same ID, same synonyms, same analytics. A buyer who marks Jewelry as an interest is matched on both lanes.
+
+Duplicating a category per lane would split its analytics, split its notification matching, and require every synonym edit to be made twice. It is forbidden.
+
+Each lane's browse surface filters to `lanes @> ARRAY['local']::lane[]` or equivalent. The GIN index on `lanes` serves this.
+
+### 5.5 No free-text, anywhere
+
+Merchants select from this taxonomy. Buyers select from this taxonomy. Type-ahead searches this taxonomy — **never drop titles or descriptions.**
+
+Free-text search over drop content would reward keyword-stuffed titles, return junk, and hand merchants a new surface to game. A closed taxonomy gives clean filtering, clean analytics, and no gaming surface.
+
+### 5.6 Seed data
+
+Ship `supabase/seed/taxonomy-seed.sql` — **24 groups, 454 leaves, 1,305 synonyms.** Generated from `taxonomy/source.py`; edit the source and regenerate rather than hand-editing the SQL.
+
+Lane coverage: 413 local, 115 maker, 52 digital (leaves overlap across lanes).
+
+**Synonym collisions are expected and correct.** "wax" resolves to both Waxing & Hair Removal and Ski & Board Tuning; "nursery" to both Garden Center and Childcare. Type-ahead MUST display the parent group alongside each result so the buyer disambiguates visually — that is why `matched_on` and `group` are in the search response.
 
 **No free-text tags anywhere.** The taxonomy is platform-controlled and admin-managed (PRD §10.1). Free-text destroys matching immediately.
 

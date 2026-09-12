@@ -69,6 +69,7 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - **Lint rule scope.** `no-supabase-in-ui` covers `app/(ui)/**` and `components/**`, and bans `@supabase/*`, `lib/supabase/*`, and `lib/redis`. `no-server-actions` bans every `'use server'` directive: a static linter cannot tell a read from a mutation, and a read-only server action is exactly as unreachable from a native client as a mutating one. The ban is total by design. Both rules are `error` and fail CI.
 - **CI.** typecheck, lint, test, openapi-drift, and build are separate named jobs so a failure names its gate.
 
+
 ---
 
 ## WP-2 — Schema and invariants
@@ -308,6 +309,12 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Public `GET /v1/drops/{id}` — the shared-link surface
 - Realtime channel: `inventory_changed`, `drop_gone`
 - Drop card: absolute remaining **and** percentage; merchant redemption rate displayed
+- **Category filter and type-ahead**
+  - `GET /v1/tags/search?q=` — matches label and synonyms, minimum 2 chars, 150ms debounce
+  - `GET /v1/board?tag_id=` — ranking runs **within the filtered set**, not globally
+  - Secondary sorts: distance, ending soon
+  - Filter state survives navigation — backing out of a drop returns to the filtered board
+  - Group chips expand to include all child leaves
 
 **Acceptance gate:**
 - A 10-unit and a 200-unit drop at equal sell-through rank equally — percentage, not count
@@ -315,6 +322,9 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Cold-start fallback engages for a new city and disengages on threshold
 - Unauthenticated `GET /v1/drops/{id}` returns 200 with `can_catch: false` and a reason
 - Realtime is display-only; catch success is decided solely by `POST /v1/catches`
+- Type-ahead resolves a synonym to its leaf — "car wash" returns Auto Detail
+- No endpoint anywhere performs free-text search over drop titles or descriptions — **grep-verified**
+- Filtering to a category, opening a drop, and navigating back preserves the filter
 
 ---
 

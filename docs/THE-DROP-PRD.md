@@ -471,11 +471,29 @@ Followers share drops externally via tracked links. This is the organic reach pa
 
 ## 10. PREFERENCES, RANKING, AND CLOUT
 
-### 10.1 Preference taxonomy
+### 10.1 Preference and category taxonomy
 
-Buyers select interests across food types, apparel, digital, culture, and other categories. Merchants and makers select **matching tags** at account creation.
+**One taxonomy serves two jobs.** Buyers select interests from it; merchants classify themselves with it. The same node must serve both, or notification matching and browse filtering will disagree.
+
+Two levels. Groups are browsable chips (Food & Drink, Auto, Home Services, Personal Care, Cleaning, Entertainment, Retail). Leaves are selectable and are what type-ahead resolves to (Tacos, Oil Change, Window Washing, Dry Cleaning, Barber).
+
+Every leaf carries **synonyms**. A merchant classified as Auto Detail must be findable by a buyer typing "car wash." This is not a nicety — without it the filter does not work.
 
 **The taxonomy is shared, centrally controlled, and platform-managed.** Free-text tags are forbidden — they destroy matching immediately. Taxonomy editing is an admin surface (§11).
+
+### 10.1.1 Browse and filter
+
+**The board is the front page, not the product.** Most buying happens inside a filter.
+
+A buyer opens the app, scans On Fire, and if nothing lands they filter by category. This is a coupon book with fast filters — food, apparel, and entertainment sit alongside oil changes, window washing, and dry cleaning, and those never compete for the same attention.
+
+- **Type-ahead searches the taxonomy**, never drop titles or descriptions. Free-text search over drop content would reward keyword stuffing and hand merchants a gaming surface.
+- Minimum 2 characters, debounced. Hundreds of leaves stay usable because nobody scrolls them.
+- **Ranking runs within the filtered set.** Percentage-remaining is the default sort inside a filter, not a global allocation. A dry cleaner ranks against services, not against the hottest restaurant in the city.
+- Secondary sorts: distance, ending soon.
+- **Filter state survives navigation.** Backing out of a drop returns to the filtered board.
+
+**This removes the need for a board-exposure floor.** No merchant is invisible in their own category; they simply are not on the front page, which was never where a dry cleaner was going to convert.
 
 ### 10.2 Board and ranking
 
@@ -594,10 +612,13 @@ Tiers gate on **drops per month** — a real platform cost (board inventory and 
 
 | Tier | Allowance | Price |
 |---|---|---|
-| Local Starter | 8 drops/month **per location** | $149 |
-| Local Boss | 24 drops/month **per location** | $249 |
+| Local Starter | 2 drops/month **per location** | $99 |
+| Local Limited | 8 drops/month **per location** | $149 |
+| Local Boss | 12 drops/month **per location** (≈3/week) | $199 |
 | Local Superstar | Up to **8 locations**, 64 drops/month **pooled across all locations** | $795 |
 | Enterprise | 8+ locations or 64+ drops. Custom limits. | **Call for pricing** |
+
+**Ladder rationale:** Starter matches observed entry behavior (2–4 drops/month), so a new merchant never stares at unused capacity — the most common cause of first-cycle cancellation. Boss is anchored on three drops per week, which is how a merchant actually thinks about dead hours (Tuesday, Wednesday, Thursday afternoons), not on abstract volume.
 
 **Superstar pooling:** the 64-drop allowance is an **Organization-level counter**, not per-location. The UI MUST display the shared balance. This is different plumbing from the lower tiers, which are location-level counters.
 
