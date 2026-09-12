@@ -1,0 +1,256 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "The Drop API",
+    "version": "0.1.0",
+    "description": "The native contract. Every capability of The Drop is reachable through these routes by web, iOS, and Android alike. Generated from route definitions; do not edit by hand."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Same origin. Base path is /v1."
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Supabase Auth JWT. Same token for web and native."
+      }
+    },
+    "schemas": {
+      "getHealthResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Health"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "env": {
+            "type": "string",
+            "enum": [
+              "local",
+              "staging",
+              "production"
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "env",
+          "version"
+        ]
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UNAUTHENTICATED",
+                  "FORBIDDEN",
+                  "LOCATION_PERMISSION_REQUIRED",
+                  "ACCOUNT_SUSPENDED",
+                  "NOT_FOUND",
+                  "DROP_GONE",
+                  "DROP_NOT_LIVE",
+                  "ALREADY_CAUGHT",
+                  "ALREADY_REDEEMED",
+                  "OUTSIDE_GEOFENCE",
+                  "GPS_ACCURACY_INSUFFICIENT",
+                  "INVALID_CODE",
+                  "REDEMPTION_WINDOW_CLOSED",
+                  "TRANSFER_CUTOFF_PASSED",
+                  "TRANSFER_LIMIT_REACHED",
+                  "TRANSFER_EXPIRED",
+                  "FANATIC_LIMIT_REACHED",
+                  "ALLOWANCE_EXHAUSTED",
+                  "DROP_IMMUTABLE",
+                  "HANDLE_LOCKED",
+                  "HANDLE_TAKEN",
+                  "RATE_LIMITED",
+                  "VALIDATION_ERROR",
+                  "INTERNAL_ERROR",
+                  "NOT_READY"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "details"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "getReadyResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Ready"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "Ready": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ]
+          },
+          "checks": {
+            "type": "object",
+            "properties": {
+              "supabase": {
+                "type": "string",
+                "enum": [
+                  "ok"
+                ]
+              },
+              "redis": {
+                "type": "string",
+                "enum": [
+                  "ok"
+                ]
+              }
+            },
+            "required": [
+              "supabase",
+              "redis"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Liveness",
+        "description": "Is the app running. No dependency pings. Exempt from X-Client headers so monitors can call it.",
+        "tags": [
+          "Operations"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getHealthResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ready": {
+      "get": {
+        "operationId": "getReady",
+        "summary": "Readiness",
+        "description": "Is the app wired. Pings Supabase and Redis. 503 NOT_READY names each dependency's result in details.checks.",
+        "tags": [
+          "Operations"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getReadyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error. code: NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

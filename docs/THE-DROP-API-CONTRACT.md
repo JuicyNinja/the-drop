@@ -88,6 +88,8 @@ Error:
 | `HANDLE_TAKEN` | 409 | |
 | `RATE_LIMITED` | 429 | |
 | `VALIDATION_ERROR` | 422 | |
+| `INTERNAL_ERROR` | 500 | Unexpected server failure. `details` is always `{}`; internals are never exposed |
+| `NOT_READY` | 503 | `GET /v1/ready` only. A dependency did not respond; `details.checks` names each |
 
 ### 1.5 Pagination
 
@@ -103,6 +105,27 @@ GET /v1/drops?cursor=<opaque>&limit=20
 `POST /catches` and `POST /redemptions` MUST be idempotent. The key is held in Redis with a 24-hour TTL. A repeat with the same key returns the original response, including the original position number. It does not consume a second unit.
 
 This is not optional. Mobile networks retry, and without it a dropped response consumes inventory the buyer never received.
+
+### 1.7 Liveness and readiness
+
+Two operational routes. Both are unauthenticated, both are exempt from the `X-Client` / `X-Client-Version` requirement in §1.2, and both appear in `openapi.json`.
+
+**`GET /v1/health` — liveness.** Answers "is the app running." No dependency pings.
+
+```json
+{ "data": { "status": "ok", "env": "local" | "staging" | "production", "version": "<semver>" }, "meta": {} }
+```
+
+This is what uptime monitors and Vercel hit. It must never depend on Supabase or Redis: a dependency hiccup must not mark the platform down, or trigger a restart, while every catch is still succeeding.
+
+**`GET /v1/ready` — readiness.** Answers "is the app wired." Pings Supabase and Redis with a short timeout.
+
+```json
+200 → { "data": { "status": "ready", "checks": { "supabase": "ok", "redis": "ok" } }, "meta": {} }
+503 → { "error": { "code": "NOT_READY", "message": "A dependency did not respond.", "details": { "checks": { "supabase": "ok", "redis": "failed: <reason>" } } } }
+```
+
+An unconfigured environment is also `503 NOT_READY`, with `details.env` listing each missing variable. Not for monitors. Used by engineers and CI to confirm an environment is actually wired.
 
 ---
 

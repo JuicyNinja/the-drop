@@ -60,6 +60,15 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 
 **Note:** The two lint rules are the architectural boundary. They are the mechanism that keeps native viable. Do not disable them.
 
+**Decisions recorded 2026-09-12 (during WP-1 execution):**
+
+- **Health is two routes, not one.** `GET /v1/health` is static liveness; `GET /v1/ready` is deep readiness (Supabase + Redis, 503 `NOT_READY` on failure). Both exempt from `X-Client` headers. Specified in API-CONTRACT §1.7. Two server-side codes were added to §1.4 to make the envelope complete: `INTERNAL_ERROR` (500) and `NOT_READY` (503).
+- **Redis is Upstash Redis via `@upstash/redis` (REST).** On Vercel's serverless runtime a TCP client (ioredis) opens a connection per invocation; at drop-open that is a connection storm in exactly the moment the product cannot fail. The REST client is stateless with no pool to exhaust. Two hard requirements WP-7 depends on: (1) `DECR` is one atomic round trip, never read-then-write, never a Lua wrapper, never client-side optimistic locking; (2) idempotency keys are claimed with a single `SET key value NX EX 86400`, never `SETNX` followed by `EXPIRE`. All Redis access goes through `lib/redis.ts`; no route handler imports the Upstash client. Both requirements are pinned by unit tests.
+- **Environment is validated at boot.** One Zod schema in `lib/env.ts`, parsed in `instrumentation.ts`. A missing key fails with `NAME is required`. `process.env` is not read anywhere else. `.env.example` is the provisioning checklist.
+- **Base path.** Handlers live under `app/api/v1/*`; a Next rewrite makes the contract path `/v1/*` canonical.
+- **Lint rule scope.** `no-supabase-in-ui` covers `app/(ui)/**` and `components/**`, and bans `@supabase/*`, `lib/supabase/*`, and `lib/redis`. `no-server-actions` bans every `'use server'` directive: a static linter cannot tell a read from a mutation, and a read-only server action is exactly as unreachable from a native client as a mutating one. The ban is total by design. Both rules are `error` and fail CI.
+- **CI.** typecheck, lint, test, openapi-drift, and build are separate named jobs so a failure names its gate.
+
 ---
 
 ## WP-2 — Schema and invariants

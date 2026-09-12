@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+import { ENV_VARIABLE_NAMES, EnvError, parseEnv } from "@/lib/env";
+import { VALID_ENV } from "./helpers/env";
+
+describe("lib/env", () => {
+  it("parses a complete environment", () => {
+    const env = parseEnv(VALID_ENV);
+    expect(env.APP_ENV).toBe("local");
+    expect(env.UPSTASH_REDIS_REST_URL).toBe(VALID_ENV.UPSTASH_REDIS_REST_URL);
+  });
+
+  it("names a missing variable: 'X is required'", () => {
+    const source = { ...VALID_ENV };
+    delete source.SUPABASE_SERVICE_ROLE_KEY;
+
+    let caught: unknown;
+    try {
+      parseEnv(source);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(EnvError);
+    const err = caught as EnvError;
+    expect(err.problems).toEqual(["SUPABASE_SERVICE_ROLE_KEY is required"]);
+    expect(err.message).toContain("SUPABASE_SERVICE_ROLE_KEY is required");
+  });
+
+  it("treats an empty string as missing", () => {
+    expect(() =>
+      parseEnv({ ...VALID_ENV, UPSTASH_REDIS_REST_TOKEN: "" }),
+    ).toThrow("UPSTASH_REDIS_REST_TOKEN is required");
+  });
+
+  it("names an invalid value: 'X is invalid: ...'", () => {
+    expect(() =>
+      parseEnv({ ...VALID_ENV, NEXT_PUBLIC_SUPABASE_URL: "not a url" }),
+    ).toThrow(/NEXT_PUBLIC_SUPABASE_URL is invalid/);
+    expect(() => parseEnv({ ...VALID_ENV, APP_ENV: "prod" })).toThrow(
+      /APP_ENV is invalid/,
+    );
+  });
+
+  it("reports every problem at once, not just the first", () => {
+    let caught: EnvError | undefined;
+    try {
+      parseEnv({});
+    } catch (error) {
+      caught = error as EnvError;
+    }
+    expect(caught?.problems).toHaveLength(ENV_VARIABLE_NAMES.length);
+    for (const name of ENV_VARIABLE_NAMES) {
+      expect(caught?.problems).toContain(`${name} is required`);
+    }
+  });
+});

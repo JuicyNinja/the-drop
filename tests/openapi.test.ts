@@ -1,0 +1,56 @@
+import fs from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  OPENAPI_FILE,
+  contractPathFor,
+  generateOpenApiDocument,
+  serializeOpenApi,
+} from "@/lib/api/openapi";
+
+const ROOT = path.resolve(__dirname, "..");
+
+describe("openapi.json (the native contract)", () => {
+  it("maps route file locations to contract paths", () => {
+    expect(contractPathFor(path.join("app", "api", "v1", "health", "route.ts"))).toBe(
+      "/v1/health",
+    );
+    expect(
+      contractPathFor(path.join("app", "api", "v1", "drops", "[id]", "route.ts")),
+    ).toBe("/v1/drops/{id}");
+    expect(
+      contractPathFor(path.join("app", "api", "v1", "orgs", "[id]", "locations", "route.ts")),
+    ).toBe("/v1/orgs/{id}/locations");
+  });
+
+  it("is generated from every route file under app/api/v1", async () => {
+    const doc = await generateOpenApiDocument(ROOT);
+    expect(doc.openapi).toBe("3.1.0");
+    expect(Object.keys(doc.paths ?? {})).toEqual(["/v1/health", "/v1/ready"]);
+  });
+
+  it("documents both operational routes as header-exempt and unauthenticated", async () => {
+    const doc = await generateOpenApiDocument(ROOT);
+    for (const p of ["/v1/health", "/v1/ready"]) {
+      const op = (doc.paths?.[p] as { get: Record<string, unknown> }).get;
+      expect(op.security).toEqual([]);
+      expect(op.parameters ?? []).toEqual([]);
+    }
+    const ready = (doc.paths?.["/v1/ready"] as { get: { responses: Record<string, unknown> } }).get;
+    expect(Object.keys(ready.responses).sort()).toEqual(["200", "500", "503"]);
+  });
+
+  it("matches the committed openapi.json (drift check)", async () => {
+    const committed = fs
+      .readFileSync(path.join(ROOT, OPENAPI_FILE), "utf8")
+      .replace(/\r\n/g, "\n");
+    const generated = serializeOpenApi(await generateOpenApiDocument(ROOT));
+    expect(committed).toBe(generated);
+  });
+
+  it("generation is deterministic", async () => {
+    const a = serializeOpenApi(await generateOpenApiDocument(ROOT));
+    const b = serializeOpenApi(await generateOpenApiDocument(ROOT));
+    expect(a).toBe(b);
+  });
+});
