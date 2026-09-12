@@ -1,0 +1,516 @@
+# THE DROP — DESIGN SYSTEM
+
+**Version:** 1.0
+**Companion to:** THE-DROP-PRD.md, CLAUDE.md
+**Consumer:** Claude Code / autonomous coding agent
+
+---
+
+## 0. THE IDEA
+
+The product is a departure board. Not a metaphor applied to a commerce app — the actual object.
+
+A split-flap board is a **physical machine in a bright hall.** The board is dark graphite. The hall around it is daylight. Information arrives by mechanical flip, not by fade. Nothing on a departure board is trying to persuade you; it states a fact and the fact is either still there or it isn't.
+
+**That inversion is the whole design.** Most apps in this category are dark-mode-with-an-accent. This one is a **light room containing a dark object.** Cards are flap tiles mounted on a rail. The page is the terminal hall.
+
+This is why there is less black than the reference: black is the board, not the background.
+
+**Spend the boldness in one place — the flip.** Everything else stays quiet.
+
+---
+
+## 1. COLOR
+
+### 1.1 Core palette — six values
+
+```css
+--hall:      #FAFAF8;  /* Page ground. Near-white, barely warm. The terminal hall. */
+--board:     #23242A;  /* The split-flap housing. Dark graphite, cool cast. Not black. */
+--ink:       #16171B;  /* Primary text on light. */
+--signal:    #F25C05;  /* Live. Primary action. Hot saturated orange. */
+--flap:      #F5B428;  /* Ending soon. Warning. Flap-yellow. */
+--oxide:     #C0271A;  /* Gone. Used sparingly — never as decoration. */
+```
+
+### 1.2 Supporting neutrals
+
+```css
+--hall-sunk:   #F2F1ED;  /* Recessed panels, form field rest state */
+--board-lift:  #2E3037;  /* Raised flap face on the board */
+--board-deep:  #191A1F;  /* Board recess, tile gap */
+--grey:        #6E7078;  /* Secondary text, metadata */
+--grey-mute:   #9B9DA4;  /* Tertiary, disabled */
+--hairline:    #E3E1DC;  /* Structural rules only */
+--on-board:    #F0EEE8;  /* Text on the dark board */
+```
+
+### 1.3 Usage law
+
+| Color | Where it is allowed |
+|---|---|
+| `--signal` | The Catch button. Live-state indicator. Filled inventory pips. Nothing else. |
+| `--flap` | Ending-soon state. Low-inventory pips. Allowance-cap warnings. |
+| `--oxide` | The Gone stamp. Destructive confirmations. **Never a border, never a background wash, never decoration.** |
+| `--board` | Tile faces, the board rail, the code keypad. |
+
+**Orange is the product's only loud voice.** If it appears in three places on one screen, two of them are wrong.
+
+**No gradients anywhere.** A split-flap has no gradients. Solid fills, hard edges, real shadows.
+
+### 1.4 State colors
+
+```css
+--state-live:       var(--signal);
+--state-ending:     var(--flap);
+--state-gone:       var(--oxide);
+--state-unverified: var(--grey);   /* merchant feed only — never buyer-facing */
+```
+
+### 1.5 Dark mode
+
+**Not in v1.** The design already contains its own dark surface. A global dark mode would collapse the hall-and-board relationship the whole system rests on.
+
+---
+
+## 2. TYPOGRAPHY
+
+Three faces. Each has a job that the others cannot do. All free for commercial use, all self-hosted as WOFF2 — no Google Fonts CDN, no FOUT.
+
+### 2.1 The faces
+
+**Bricolage Grotesque** — display
+Variable (`opsz`, `wght`, `wdth`). Squarish, slightly mechanical, real character at large sizes. A designer's face rather than a systems face — it reads as chosen, not defaulted. Google Fonts, OFL.
+*Used for:* drop titles, the coupon-print offer line, page headings, the Gone stamp.
+
+**Satoshi** — interface
+Neutral, geometric, excellent at small sizes. Carries body copy, labels, form fields, and every operator-portal surface without competing with the display face. Fontshare (ITF), free commercial.
+*Used for:* body, UI chrome, buttons, forms, tables.
+
+**Departure Mono** — data
+A free pixel-terminal face built after real departure-board displays. It is the only face permitted for numerals that represent **identity or scarcity.** By Helena Zhang, free commercial.
+*Used for:* redemption codes, position numbers, user numbers, the split-flap numerals, countdown timers, inventory counts.
+
+**Why three:** Departure Mono is not a third voice — it is a data instrument. It appears only where a number *is* the content. Restricting it to that role is what keeps it meaningful.
+
+### 2.2 Scale
+
+Base 16px. Ratio 1.25 with a display jump.
+
+```css
+--t-xs:    0.75rem;   /* 12 — metadata, timestamps */
+--t-sm:    0.875rem;  /* 14 — labels, secondary */
+--t-base:  1rem;      /* 16 — body */
+--t-md:    1.125rem;  /* 18 — lead body */
+--t-lg:    1.5rem;    /* 24 — card title */
+--t-xl:    2rem;      /* 32 — page heading */
+--t-2xl:   3rem;      /* 48 — coupon print */
+--t-3xl:   4.5rem;    /* 72 — position number, hero */
+```
+
+### 2.3 Treatments
+
+```css
+.display    { font-family: Bricolage; font-variation-settings: 'wght' 600, 'wdth' 100, 'opsz' 40;
+              line-height: 1.05; letter-spacing: -0.02em; }
+.coupon     { font-family: Bricolage; font-variation-settings: 'wght' 800, 'wdth' 85;
+              font-size: var(--t-2xl); line-height: 0.95; letter-spacing: -0.03em; }
+.body       { font-family: Satoshi; font-weight: 400; line-height: 1.55; max-width: 68ch; }
+.data       { font-family: 'Departure Mono'; font-weight: 400; letter-spacing: 0.04em;
+              font-variant-numeric: tabular-nums; }
+```
+
+`tabular-nums` is mandatory anywhere a number changes in place. Counters that shift width while decrementing read as broken.
+
+### 2.4 Typographic prohibitions
+
+- **No tracked-out all-caps eyebrows.** Ever.
+- **No single accented word** in a headline.
+- **No `→` appended to buttons or links.**
+- **No meta strings joined by middle dots.**
+- Sentence case throughout. The only uppercase in the product is the redemption code and the Gone stamp.
+
+---
+
+## 3. SPACE, RADIUS, SHADOW
+
+```css
+--s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+--s-5: 24px;  --s-6: 32px;  --s-7: 48px;  --s-8: 64px;  --s-9: 96px;
+
+--r-tile:  10px;   /* flap tile */
+--r-field: 8px;    /* inputs */
+--r-pill:  999px;  /* logo bubble, status chips */
+--r-btn:   8px;
+```
+
+**Shadows are mechanical, not soft.** A flap tile is a physical object with a hard edge.
+
+```css
+--sh-logo:  -2px -2px 0 rgba(0,0,0,0.18);          /* logo bubble, top-left edge */
+--sh-tile:  0 2px 0 var(--board-deep), 0 8px 16px -6px rgba(22,23,27,0.28);
+--sh-lift:  0 4px 0 var(--board-deep), 0 16px 32px -8px rgba(22,23,27,0.34);
+--sh-gone:  0 1px 0 rgba(0,0,0,0.10);              /* the single flat shadow */
+```
+
+**The generic `rgba(0,0,0,0.1)` card shadow does not appear anywhere in this system.** Tiles carry a hard bottom edge plus a cast shadow — that is what makes them read as physical.
+
+---
+
+## 4. THE DROP CARD
+
+The signature component. Every other surface is subordinate to it.
+
+### 4.1 Anatomy
+
+```
+┌──────────────────────────────────────┐
+│ ◉                          [ LIVE ]  │   ◉ = logo bubble, --sh-logo top-left
+│                                      │
+│   FREE COFFEE                        │   coupon print, Bricolage 800/85
+│   WITH ANY APPETIZER                 │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │                                  │ │
+│ │   motion-enhanced photo          │ │   16:9, cinemagraph loop
+│ │                                  │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ ●●●●●●●○○○○○○○○○○○○○    12 left  24% │   pips + Departure Mono
+│                                      │
+│ Maxwell's · 0.8 mi · 3–6pm Tue       │
+│ ▓▓▓▓▓▓▓▓░░ 87% redeemed              │   merchant score
+└──────────────────────────────────────┘
+```
+
+**Card dimensions are identical on mobile and desktop.** Desktop renders it larger and with motion; the composition never changes. One card design, two sizes.
+
+### 4.2 The logo bubble
+
+Circular, 40px, top-left, overlapping the card edge by 8px. Carries `--sh-logo` — a hard 2px offset shadow toward the top-left, which is the wrong direction for a light source and therefore reads as a **badge pinned onto the card** rather than a floating element. That wrongness is intentional and is the card's fingerprint.
+
+### 4.3 Coupon print
+
+The offer line is the loudest type in the product. Condensed, heavy, tight-leaded, ink-colored. It is a printed coupon, not a headline — physical, slightly overbearing, two or three lines maximum.
+
+Truncate at 3 lines. Never shrink to fit; a longer offer wraps to detail instead.
+
+### 4.4 Motion-enhanced photo
+
+Short cinemagraph loop. Not a video player — no controls, no sound, no scrubbing.
+
+| Spec | Value |
+|---|---|
+| Format | WebM (VP9) + MP4 (H.264) fallback |
+| Duration | 2–4s, seamless loop |
+| Size ceiling | **400KB.** Hard limit. |
+| Poster | Static WebP, always present, always loads first |
+| Desktop | Plays on hover |
+| Mobile | **Poster only by default.** Plays when the card is the focused in-view card. |
+| `prefers-reduced-motion` | Poster only, always |
+
+**Mobile must be fast and light.** Autoplaying loops on every card in a scrolling feed is the fastest way to break that. One card plays at a time.
+
+### 4.5 Inventory pips
+
+Discrete units, never a progress bar.
+
+- ≤ 30 units: one pip per unit
+- 31–100: pips represent 5 units each, remainder partial
+- \> 100: pips represent 10 units each
+
+Filled = `--signal`. Below 25% remaining, filled pips turn `--flap`. Empty = `--hairline` on light, `--board-deep` on board.
+
+Card shows **absolute remaining and percentage.** Percentage is what ranks; absolute is what a human reads.
+
+Pips animate on decrement with a 120ms hard step — no fade, no ease. A pip going out is a mechanical event.
+
+### 4.6 Hover flip
+
+Rolling over a card flips it to the clean face: **no image, no motion.** Deal type, terms, timing, merchant, distance — set in Satoshi, generously spaced, fully legible.
+
+This is the card's honest side. The front sells; the back informs.
+
+| Spec | Value |
+|---|---|
+| Trigger | Hover (desktop) / long-press (mobile) |
+| Transform | `rotateY` 180°, `transform-style: preserve-3d` |
+| Duration | 420ms |
+| Easing | `cubic-bezier(0.2, 0.8, 0.2, 1)` — mechanical settle, slight overshoot |
+| Reduced motion | Cross-fade, 160ms |
+
+### 4.7 Card → page
+
+Click expands card to full page. Shared-element transition: the card grows into the page, logo bubble and coupon print holding position.
+
+The page carries everything: full terms, all stats, the position board, merchant profile, map, and **two buttons only — Catch and Share.**
+
+No third action. No save-for-later, no wishlist, no follow button competing at the decision point.
+
+### 4.8 Live stats
+
+Real-time, moving, on both card and page. Feeds the decision.
+
+| Stat | Source | Updates |
+|---|---|---|
+| Remaining + % | Realtime channel | Live |
+| Catch rate | `drop_pressure` | 60s |
+| Merchant redemption rate | `merchant_scores` | Daily |
+| Time to close | Client countdown, server-anchored | 1s |
+| Position you would get | Derived from remaining | Live |
+
+**"You'd be #48"** shown next to the Catch button is the highest-value number on the page. It makes the position system legible before the user has ever caught anything.
+
+### 4.9 Gone state
+
+1. Drop sells out or the window closes
+2. Card takes the **Gone stamp** — Bricolage 800, `--oxide`, rotated -4°, 70% opacity, overlaid
+3. Card desaturates to greyscale, drops to `--sh-gone` — the single flat shadow
+4. Becomes unclickable — `pointer-events: none`, hover flip disabled
+5. **Remains on the board for 5 minutes**, then leaves
+6. **Permanently browsable** under the business profile and under the user's Past Drops
+
+The 5-minute persistence matters: seeing a drop die in front of you is the scarcity mechanic doing its work. Removing it instantly hides the evidence.
+
+---
+
+## 5. POSITION NUMBERS
+
+The status artifact. Design it so a 18-year-old reads it once and immediately wants a lower one.
+
+### 5.1 Treatment
+
+Departure Mono, `--t-3xl`, `--signal` on `--board`. No label. No "Position:" prefix. No `#` on the hero treatment.
+
+```
+┌─────────────┐
+│             │
+│     047     │   Departure Mono, 72px, --signal
+│             │
+│  of 200     │   Satoshi 14px, --grey-mute
+└─────────────┘
+```
+
+Zero-padded to the drop's digit width — 047 of 200, not 47. Padding is what makes it read as a ticket rather than a count.
+
+### 5.2 Where it lives
+
+| Surface | Treatment |
+|---|---|
+| Catch confirmation | Full-screen, split-flap animated arrival |
+| Wallet card | 32px inline, left-aligned |
+| Public position board | Ranked list, handle + number |
+| Profile | Best positions held, as a collection |
+| Pre-catch on drop page | "You'd be 048" — the hook |
+
+### 5.3 Why it works for a young user
+
+Low number = early = status, with zero explanation required. The split-flap arrival animation on catch makes the number feel **issued** rather than calculated. It is screenshot-shaped on purpose — vertical, high-contrast, self-explanatory out of context.
+
+### 5.4 User number
+
+The permanent 14-digit account number, Departure Mono, `--grey`, small, on the profile. Full padding: `00000000000047`.
+
+Never hero-sized. It is a quiet flex — the people who care will find it.
+
+---
+
+## 6. THE SPLIT-FLAP
+
+The one place with real motion. It appears in exactly three moments and nowhere else.
+
+### 6.1 Where
+
+1. **Board arrival** — a new drop going live flips into the rail
+2. **Catch confirmation** — the position number flipping into place
+3. **Gone** — the state flipping over
+
+**Not on load. Not on scroll. Not on hover.** A board that flips constantly is noise; a board that flips when something actually changed is information.
+
+### 6.2 Mechanics
+
+| Spec | Value |
+|---|---|
+| Flip unit | One character |
+| Per-character duration | 180ms |
+| Stagger | 40ms left to right |
+| Intermediate frames | 3–5 random characters from the code alphabet before settling |
+| Easing | `cubic-bezier(0.45, 0.05, 0.15, 1)` |
+| Split line | 1px `--board-deep` across the tile center, always visible at rest |
+| Sound | None |
+| Reduced motion | Instant set, no intermediates |
+
+The horizontal split line at rest is what identifies the tile as a flap before it ever moves.
+
+---
+
+## 7. FORMS AND THE CODE KEYPAD
+
+### 7.1 Fields
+
+Easy to find, easy to open, easy to type into.
+
+```css
+input {
+  background: var(--hall-sunk);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-field);
+  padding: 14px 16px;
+  font: 400 var(--t-base) Satoshi;
+  min-height: 48px;
+}
+input:focus {
+  background: #FFF;
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px rgba(242,92,5,0.14);
+  outline: none;
+}
+```
+
+Labels sit **above** the field, `--t-sm`, `--grey`, always visible. No floating labels — they hide the label exactly when someone is typing.
+
+Errors sit below in `--oxide`, stating what to fix rather than what went wrong.
+
+### 7.2 The redemption keypad
+
+Tapping **Redeem** opens a field sheet from the bottom.
+
+```
+┌──────────────────────────────┐
+│  Enter the code              │
+│                              │
+│   ┌───┐ ┌───┐ ┌───┐ ┌───┐    │
+│   │ K │ │ 7 │ │ M │ │   │    │   Departure Mono 40px
+│   └───┘ └───┘ └───┘ └───┘    │   --board tiles, --on-board text
+│                              │
+│  Maxwell's · Main St         │
+│                              │
+│         [  Redeem  ]         │
+└──────────────────────────────┘
+```
+
+- Four separate character tiles, Departure Mono, `--board` background
+- Auto-advance on entry, auto-submit on the fourth character
+- Uppercase-only input; lowercase silently transformed
+- Characters outside the 24-symbol alphabet are rejected at the keystroke — they never appear
+- `inputmode="text"`, `autocomplete="off"`, `autocapitalize="characters"`
+- Filled tile does a single flap-flip as it takes the character
+
+Sheet height sits above the mobile keyboard. The field is never obscured.
+
+---
+
+## 8. BUTTONS
+
+```css
+.btn-catch {            /* THE button. One per screen, maximum. */
+  background: var(--signal); color: #FFF;
+  font: 600 var(--t-md) Satoshi;
+  padding: 16px 32px; border-radius: var(--r-btn);
+  min-height: 52px;
+  box-shadow: 0 2px 0 #C94A04;   /* hard bottom edge — a physical key */
+}
+.btn-catch:active { transform: translateY(2px); box-shadow: none; }
+
+.btn-secondary {        /* Share, Cancel, Back */
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.btn-board {            /* on dark surfaces */
+  background: var(--board-lift); color: var(--on-board);
+}
+```
+
+Buttons say exactly what happens. **Catch**, **Redeem**, **Send**, **Share**. Never Submit, never Continue, never Learn More. Never an arrow glyph.
+
+---
+
+## 9. OPERATOR PORTAL
+
+Same tokens. Different density. Operators are working, not browsing.
+
+- Desktop-first, data-dense, tables over cards
+- **Scoreboard fixed top-right on every screen** — `--board` panel, Departure Mono numerals, `--signal` on the number that matters most this cycle
+- Today's Code screen renders the code at `--t-3xl` Departure Mono on `--board`, readable across a counter
+- Phonetic guidance beneath in Satoshi `--t-md`
+- Live redemption feed, newest first, unverified entries marked with a `--grey` dot and the word *unverified*
+- Add Location is always visible at every tier; the paywall fires on click and never hides the control
+
+---
+
+## 10. RESPONSIVE
+
+```css
+--bp-sm:  480px;
+--bp-md:  768px;
+--bp-lg:  1024px;
+--bp-xl:  1440px;
+```
+
+| Surface | Mobile | Desktop |
+|---|---|---|
+| Board | 1 column | 2–3 columns |
+| Card | Identical composition, smaller | Identical composition, larger |
+| Motion photo | Focused card only | Hover |
+| Flip | Long-press | Hover |
+| Operator | Functional, cramped | Primary target |
+
+**The card composition is identical at every size.** Logo bubble, coupon print, photo, pips, stats — same order, same proportions, same hierarchy. Only scale and motion budget change.
+
+---
+
+## 11. PERFORMANCE BUDGET
+
+Mobile is the product. These are limits, not goals.
+
+| Metric | Budget |
+|---|---|
+| LCP (board, 4G) | < 2.0s |
+| Initial JS | < 180KB gzipped |
+| Fonts | 3 WOFF2, subset latin, `font-display: swap`, < 120KB total |
+| Cinemagraph | 400KB each, lazy, one playing at a time |
+| Board query | < 200ms p95 |
+| CLS | < 0.05 |
+
+Cards reserve their full dimensions before content loads. A board that reflows while inventory is falling is unusable.
+
+---
+
+## 12. ACCESSIBILITY
+
+- Contrast: `--ink` on `--hall` = 15.8:1. `--on-board` on `--board` = 12.1:1. **`--signal` on white fails at body size — it is permitted only at ≥18px bold or as a fill behind white text.**
+- Every interactive element has a visible focus ring: 3px `rgba(242,92,5,0.4)`
+- `prefers-reduced-motion` disables every flip; state changes still register instantly
+- Touch targets ≥ 44px
+- Live inventory changes announced via `aria-live="polite"`, throttled to 5s
+- Position number carries an `aria-label`: "Position 47 of 200"
+- Color never carries meaning alone — Gone has a stamp, not just a hue
+
+---
+
+## 13. WHAT THIS SYSTEM IS NOT
+
+Rejected deliberately. Do not reintroduce.
+
+| Not | Why |
+|---|---|
+| Dark mode app with an accent | The board is the dark object; the page is the hall |
+| Cream background + serif display + terracotta | Generic, and terracotta is one hue off `--signal` |
+| Percentage progress bars | Scarcity is discrete. Pips, always. |
+| Soft `rgba(0,0,0,0.1)` card shadows | Tiles are physical. Hard edge plus cast. |
+| Gradients | A split-flap has none. |
+| Fade-and-slide-up section entrances | The generic AI tell. Motion only on real state change. |
+| All-caps tracked eyebrow labels | See §2.4 |
+| Arrows on buttons | See §8 |
+| Urgency copy | Scarcity does the work. See CLAUDE.md. |
+
+---
+
+## 14. TOKEN FILE
+
+Ship as `app/styles/tokens.css`, imported once at root. **No component may hardcode a hex value.** A hardcoded color in a PR is a review rejection.
+
+---
+
+*The board is the object. The page is the hall. The flip is the only loud thing.*
