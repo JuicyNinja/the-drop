@@ -299,8 +299,17 @@ create table tags (
 
 create index on tags (parent_id) where active;
 create index tags_lanes on tags using gin (lanes);
-create index tags_search on tags
-  using gin (to_tsvector('simple', label || ' ' || array_to_string(synonyms, ' ')));
+-- array_to_string(text[], text) is only STABLE, and Postgres refuses any
+-- non-IMMUTABLE function in an index expression (SQLSTATE 42P17). The search
+-- document is therefore built by an IMMUTABLE wrapper, and the index is on
+-- the wrapper. See "tag_search_document" below.
+create or replace function tag_search_document(label text, synonyms text[])
+returns tsvector
+language sql immutable parallel safe as $$
+  select to_tsvector('simple', label || ' ' || coalesce(array_to_string(synonyms, ' '), ''));
+$$;
+
+create index tags_search on tags using gin (tag_search_document(label, synonyms));
 
 create table user_tags (
   user_id uuid not null references users(id) on delete cascade,
@@ -314,6 +323,14 @@ create table org_tags (
   primary key (org_id, tag_id)
 );
 ```
+
+**`tag_search_document` — the only way to hit `tags_search`.** The index is built on `tag_search_document(label, synonyms)`, not on an inline `to_tsvector(...)` expression, because `array_to_string` is STABLE and Postgres rejects it in an index expression (found on first apply during WP-2, SQLSTATE 42P17). Postgres matches an expression index only when the query expression is textually identical to the indexed one. Any query against the taxonomy search index MUST therefore be written as:
+
+```sql
+where tag_search_document(label, synonyms) @@ to_tsquery('simple', $1)
+```
+
+A query that inlines `to_tsvector('simple', label || ' ' || array_to_string(synonyms, ' '))` is semantically identical and bypasses the index entirely. It will look fine at 478 rows and degrade silently as the taxonomy grows. The WP-11 gate verifies the type-ahead query with EXPLAIN.
 
 ### 5.1 One taxonomy, two jobs
 

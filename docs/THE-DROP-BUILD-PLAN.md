@@ -102,6 +102,18 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 
 **This gate is the most important in the build.** Every invariant that is enforced here cannot be broken later by application code, by a future agent, or by a well-meaning feature.
 
+**Decisions recorded 2026-09-12 (during WP-2 execution):**
+
+- **`users.id` is the Supabase Auth uid.** `id uuid primary key references auth.users(id) on delete restrict`, no default. RLS self policies are `auth.uid() = id`. The auth uid is internal plumbing: never displayed, never in a URL. `user_number` and `handle` remain the public identity. Deleting an `auth.users` row cannot remove a `users` row (FK restrict, verified by the gate); account deletion is `users.deleted_at`, and a trigger forbids DELETE on `users` outright.
+- **Append-only is enforced three ways** on `clout_events` and `admin_audit_log`: triggers reject UPDATE and DELETE for every role including the table owner; UPDATE and DELETE privileges are revoked from `service_role`; and no RLS policy grants a write. The gate exercises all three as `postgres`, as an authenticated admin JWT, and as `service_role`. `catches`, `redemptions`, and `users` also forbid DELETE by trigger, and a catch's drop, original catcher, position number, and `caught_at` are immutable by trigger.
+- **No client write privileges anywhere.** INSERT, UPDATE, and DELETE are revoked from `anon` and `authenticated` on every public table (and by default privilege for future tables). Every RLS policy is SELECT-only. All mutations go through `/v1` (CLAUDE.md invariants #7, #15). Public read exists only on taxonomy, cities, badges, organizations, locations, live and Gone drops, ranking pressure, merchant scores, and a `public_profiles` view exposing handle and user_number only.
+- **Every drop is created as `draft`.** The transition guard rejects an INSERT at any other status so the state machine cannot be entered mid-way. Local drops are rejected from `submitted` and `approved` on insert and on update.
+- **`user_roles` primary key is a unique index.** Postgres rejects a `coalesce()` expression in a PRIMARY KEY; the unique index carries identical semantics.
+- **`orders` gains `tracking_required_before_shipped`**, the check the DATA-MODEL states in prose.
+- **`tags_search` index uses an IMMUTABLE wrapper.** `array_to_string(text[], text)` is only STABLE and Postgres refuses it in an index expression (SQLSTATE 42P17, hit on first apply). `tag_search_document(label, synonyms)` is the indexed function; `GET /v1/tags/search` must query through it or the index is bypassed.
+- **Seeds.** Salt Lake City and Provo seeded inactive and unlaunched; WP-14's admin city-launch action flips a market live. Founder seeded as user_number 1 with `tad` reserved (reason `system`), email and phone unverified, location permission not granted, admin role granted. Badges table seeded empty: the badge list is an open product decision. `base.sql` is idempotent, guarded on email and user_number, and the gate proves `user_number_seq` does not advance across a re-run.
+- **The gate is `npm run db:gate`** (`lib/db/gate.ts`), also run as `tests/db/invariants.test.ts` and as the `db-invariants` CI job against a Supabase stack started on the runner. Every operation runs in a rolled-back savepoint against real Postgres and the report carries the actual SQLSTATE, constraint, and message. Fixtures never consume `user_number_seq`, so the gate is repeatable without a reset.
+
 ---
 
 ## WP-3 — Auth and registration
@@ -323,6 +335,7 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Unauthenticated `GET /v1/drops/{id}` returns 200 with `can_catch: false` and a reason
 - Realtime is display-only; catch success is decided solely by `POST /v1/catches`
 - Type-ahead resolves a synonym to its leaf — "car wash" returns Auto Detail
+- Type-ahead query uses `tag_search_document`; verified by EXPLAIN showing an index scan on `tags_search`, not a sequential scan. An index that exists but is not used is invisible until the table is large, and by then it is in production.
 - No endpoint anywhere performs free-text search over drop titles or descriptions — **grep-verified**
 - Filtering to a category, opening a drop, and navigating back preserves the filter
 

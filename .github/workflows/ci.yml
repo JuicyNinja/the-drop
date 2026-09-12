@@ -62,6 +62,26 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run openapi:check
 
+  db-invariants:
+    name: db-invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # Applies every migration and both seed files to a throwaway Postgres.
+      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+      # The WP-2 gate: every listed operation must fail at the database layer.
+      - run: npm run db:gate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
   build:
     name: build
     runs-on: ubuntu-latest

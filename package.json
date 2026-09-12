@@ -10,7 +10,10 @@
     "lint": "eslint --max-warnings 0 .",
     "test": "vitest run",
     "openapi:generate": "tsx scripts/openapi.ts",
-    "openapi:check": "tsx scripts/openapi.ts --check"
+    "openapi:check": "tsx scripts/openapi.ts --check",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:gate": "tsx scripts/db-gate.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
@@ -23,10 +26,12 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.4",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "pg": "^8.23.0",
     "supabase": "^2.117.0",
     "tsx": "^4.23.13",
     "typescript": "^5",
