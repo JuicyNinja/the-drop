@@ -26,7 +26,31 @@ describe("openapi.json (the native contract)", () => {
   it("is generated from every route file under app/api/v1", async () => {
     const doc = await generateOpenApiDocument(ROOT);
     expect(doc.openapi).toBe("3.1.0");
-    expect(Object.keys(doc.paths ?? {})).toEqual(["/v1/health", "/v1/ready"]);
+    expect(Object.keys(doc.paths ?? {})).toEqual([
+      "/v1/auth/oauth/callback",
+      "/v1/auth/oauth/start",
+      "/v1/auth/phone/verify/confirm",
+      "/v1/auth/phone/verify/send",
+      "/v1/auth/refresh",
+      "/v1/auth/register/complete",
+      "/v1/catches",
+      "/v1/health",
+      "/v1/ready",
+      "/v1/users/me",
+      "/v1/users/me/handle-search",
+      "/v1/users/me/location-permission",
+      "/v1/users/me/walkthrough/complete",
+      "/v1/users/me/walkthrough/skip",
+    ]);
+  });
+
+  it("registers authenticated routes with bearer security and 401", async () => {
+    const doc = await generateOpenApiDocument(ROOT);
+    const me = (doc.paths?.["/v1/users/me"] as { get: { security: unknown[]; responses: Record<string, unknown> } }).get;
+    expect(me.security).toEqual([{ bearerAuth: [] }]);
+    expect(Object.keys(me.responses)).toContain("401");
+    const catches = (doc.paths?.["/v1/catches"] as { post: { responses: Record<string, unknown> } }).post;
+    expect(Object.keys(catches.responses)).toContain("501");
   });
 
   it("documents both operational routes as header-exempt and unauthenticated", async () => {

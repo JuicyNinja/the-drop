@@ -9,6 +9,7 @@ export const VALID_ENV: Record<string, string | undefined> = {
   SUPABASE_SERVICE_ROLE_KEY: "service-role-placeholder",
   UPSTASH_REDIS_REST_URL: "https://placeholder.upstash.io",
   UPSTASH_REDIS_REST_TOKEN: "token-placeholder",
+  APP_URL: "http://127.0.0.1:3000",
 };
 
 /** Stub process.env for a test and clear the cached parse. */

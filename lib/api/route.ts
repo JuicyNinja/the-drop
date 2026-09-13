@@ -7,6 +7,8 @@ import {
   isApiError,
   type ErrorCode,
 } from "@/lib/api/errors";
+import { requireUser, verifySession } from "@/lib/auth/session";
+import type { UserRecord } from "@/lib/users";
 
 /**
  * `defineRoute` is the only way a `/v1` endpoint comes into existence.
@@ -61,6 +63,8 @@ export interface ClientInfo {
 
 type Infer<T> = T extends z.ZodType ? z.output<T> : undefined;
 
+export type AuthMode = "none" | "session" | "user";
+
 export interface HandlerContext<TQuery, TBody, TParams> {
   request: Request;
   query: Infer<TQuery>;
@@ -68,6 +72,12 @@ export interface HandlerContext<TQuery, TBody, TParams> {
   params: Infer<TParams>;
   /** Parsed X-Client headers, or null on routes that exempt them. */
   client: ClientInfo | null;
+  /** Auth uid on `session`/`user` routes; null on `none`. */
+  authUserId: string | null;
+  /** Auth email on `session`/`user` routes when the provider supplied one. */
+  authEmail: string | null;
+  /** The completed users row on `user` routes; null otherwise. */
+  user: UserRecord | null;
 }
 
 export interface HandlerResult<TData> {
@@ -89,11 +99,12 @@ export interface RouteConfig<
   description?: string;
   tags: [string, ...string[]];
   /**
-   * `none`: public. `bearer`: documented as requiring the Supabase JWT.
-   * Enforcement of `bearer` arrives with WP-3; until then no route may
-   * declare it.
+   * `none`: public. `session`: a valid Supabase JWT, users row optional (the
+   * registration completion routes). `user`: a valid JWT AND a completed,
+   * non-suspended users row. All three verified server-side before the
+   * handler runs.
    */
-  auth: "none";
+  auth: AuthMode;
   /**
    * Whether X-Client and X-Client-Version are required (API-CONTRACT §1.2).
    * Defaults to true. Only the operational routes in §1.7 opt out.
@@ -234,12 +245,14 @@ export function defineRoute<
     config.request?.body !== undefined ||
     config.request?.params !== undefined;
 
-  claimRoute(config.method, config.path);
+  const shouldRegister = claimRoute(config.method, config.path);
 
   const sharedErrors: ErrorCode[] = ["INTERNAL_ERROR"];
   if (hasRequestSchema) sharedErrors.push("VALIDATION_ERROR");
+  if (config.auth !== "none") sharedErrors.push("UNAUTHENTICATED");
+  if (config.auth === "user") sharedErrors.push("ACCOUNT_SUSPENDED");
 
-  registry.registerPath({
+  if (shouldRegister) registry.registerPath({
     method: config.method,
     path: config.path,
     operationId: config.operationId,
@@ -280,6 +293,19 @@ export function defineRoute<
     try {
       const client = requireClientHeaders ? parseClientHeaders(request) : null;
 
+      let authUserId: string | null = null;
+      let authEmail: string | null = null;
+      let user: UserRecord | null = null;
+      if (config.auth === "user") {
+        user = await requireUser(request);
+        authUserId = user.id;
+        authEmail = user.email;
+      } else if (config.auth === "session") {
+        const identity = await verifySession(request);
+        authUserId = identity.authUserId;
+        authEmail = identity.email;
+      }
+
       const params = (
         config.request?.params
           ? parseWith(config.request.params, await context.params, "params")
@@ -308,6 +334,9 @@ export function defineRoute<
         body,
         params,
         client,
+        authUserId,
+        authEmail,
+        user,
       });
 
       const validated = config.response.data.safeParse(result.data);

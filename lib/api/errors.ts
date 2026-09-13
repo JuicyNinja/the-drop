@@ -32,6 +32,7 @@ export const ERROR_CODES = {
   RATE_LIMITED: 429,
   VALIDATION_ERROR: 422,
   INTERNAL_ERROR: 500,
+  NOT_IMPLEMENTED: 501,
   NOT_READY: 503,
 } as const satisfies Record<string, number>;
 

@@ -53,6 +53,11 @@ const eslintConfig = defineConfig([
   {
     rules: { "the-drop/no-server-actions": "error" },
   },
+
+  // Rule 3: no dangerouslySetInnerHTML anywhere (WP-3 security decision).
+  {
+    rules: { "the-drop/no-dangerous-html": "error" },
+  },
 ]);
 
 export default eslintConfig;

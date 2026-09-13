@@ -89,9 +89,37 @@ describe("the-drop/no-server-actions", () => {
   });
 });
 
+describe("the-drop/no-dangerous-html", () => {
+  const jsxTester = new RuleTester({
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+  });
+  jsxTester.run("no-dangerous-html", theDrop.rules["no-dangerous-html"], {
+    valid: [
+      { code: `const el = <p>{title}</p>;` },
+      { code: `const el = <span title={handle}>{name}</span>;` },
+    ],
+    invalid: [
+      {
+        code: `const el = <div dangerouslySetInnerHTML={{ __html: body }} />;`,
+        errors: [{ messageId: "dangerousHtml" }],
+      },
+      {
+        code: `React.createElement("div", { dangerouslySetInnerHTML: { __html: x } });`,
+        errors: [{ messageId: "dangerousHtml" }],
+      },
+    ],
+  });
+});
+
 describe("plugin shape", () => {
-  it("exposes exactly the two boundary rules", () => {
+  it("exposes exactly the three boundary rules", () => {
     expect(Object.keys(theDrop.rules).sort()).toEqual([
+      "no-dangerous-html",
       "no-server-actions",
       "no-supabase-in-ui",
     ]);

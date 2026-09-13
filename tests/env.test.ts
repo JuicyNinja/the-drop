@@ -41,16 +41,31 @@ describe("lib/env", () => {
     );
   });
 
-  it("reports every problem at once, not just the first", () => {
+  it("reports every required problem at once, and omits optional vars", () => {
     let caught: EnvError | undefined;
     try {
       parseEnv({});
     } catch (error) {
       caught = error as EnvError;
     }
-    expect(caught?.problems).toHaveLength(ENV_VARIABLE_NAMES.length);
-    for (const name of ENV_VARIABLE_NAMES) {
+    const required = [
+      "APP_ENV",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "UPSTASH_REDIS_REST_URL",
+      "UPSTASH_REDIS_REST_TOKEN",
+      "APP_URL",
+    ];
+    expect(caught?.problems).toHaveLength(required.length);
+    for (const name of required) {
       expect(caught?.problems).toContain(`${name} is required`);
+    }
+    // Optional provider vars must never be reported as required.
+    for (const name of ENV_VARIABLE_NAMES) {
+      if (!required.includes(name)) {
+        expect(caught?.problems).not.toContain(`${name} is required`);
+      }
     }
   });
 });

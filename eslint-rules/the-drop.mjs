@@ -118,11 +118,60 @@ const noServerActions = {
   },
 };
 
+/**
+ * Rule 3: no-dangerous-html
+ *
+ * `dangerouslySetInnerHTML` is banned outright (WP-3 security decision). All
+ * merchant- and buyer-authored text — drop titles, descriptions, terms,
+ * whisper notes, handles, org names — is rendered as text and sanitized on
+ * write. An injected value reaching innerHTML is the XSS path that makes the
+ * in-memory access token and everything else moot. Same enforcement level as
+ * the other two: error, fails CI, no suppression.
+ */
+/** @type {import("eslint").Rule.RuleModule} */
+const noDangerousHtml = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "dangerouslySetInnerHTML is banned. Authored text is rendered as text and sanitized on write.",
+    },
+    messages: {
+      dangerousHtml:
+        "dangerouslySetInnerHTML is banned. Render authored text as text; sanitize on write. See CLAUDE.md / API-CONTRACT §2.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      JSXAttribute(node) {
+        if (node.name?.name === "dangerouslySetInnerHTML") {
+          context.report({ node, messageId: "dangerousHtml" });
+        }
+      },
+      // Also catch React.createElement(..., { dangerouslySetInnerHTML })
+      Property(node) {
+        const key = node.key;
+        const name =
+          key?.type === "Identifier"
+            ? key.name
+            : key?.type === "Literal"
+              ? key.value
+              : undefined;
+        if (name === "dangerouslySetInnerHTML") {
+          context.report({ node, messageId: "dangerousHtml" });
+        }
+      },
+    };
+  },
+};
+
 const plugin = {
   meta: { name: "eslint-plugin-the-drop", version: "1.0.0" },
   rules: {
     "no-supabase-in-ui": noSupabaseInUi,
     "no-server-actions": noServerActions,
+    "no-dangerous-html": noDangerousHtml,
   },
 };
 

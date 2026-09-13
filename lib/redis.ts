@@ -122,3 +122,44 @@ export async function pingRedis(): Promise<void> {
     throw new Error(`Redis PING returned ${String(reply)}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Generic short-lived state. Used by phone verification, OAuth state/PKCE,
+// and per-actor rate counters. Everything here carries a TTL: nothing set
+// through these helpers can outlive its window.
+// ---------------------------------------------------------------------------
+
+/** Store a JSON value with a TTL (seconds). Overwrites. */
+export async function kvSet<T>(
+  key: string,
+  value: T,
+  ttlSeconds: number,
+): Promise<void> {
+  await redis().set(key, value, { ex: ttlSeconds });
+}
+
+/** Read a JSON value, or null if absent/expired. */
+export async function kvGet<T>(key: string): Promise<T | null> {
+  return (await redis().get<T>(key)) ?? null;
+}
+
+/** Delete a key (single-use consumption). */
+export async function kvDel(key: string): Promise<void> {
+  await redis().del(key);
+}
+
+/**
+ * Increment a counter, setting its TTL on first use only. Returns the new
+ * count. The window does not slide: the first hit starts the clock and later
+ * hits within it do not extend it. Used for rate limits (SMS send, etc.).
+ */
+export async function incrementWithWindow(
+  key: string,
+  windowSeconds: number,
+): Promise<number> {
+  const count = await redis().incr(key);
+  if (count === 1) {
+    await redis().expire(key, windowSeconds);
+  }
+  return count;
+}

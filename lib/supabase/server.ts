@@ -11,6 +11,7 @@ import { getEnv } from "@/lib/env";
  */
 
 let serviceClient: SupabaseClient | undefined;
+let anonClient: SupabaseClient | undefined;
 
 export function getServiceClient(): SupabaseClient {
   if (!serviceClient) {
@@ -24,9 +25,26 @@ export function getServiceClient(): SupabaseClient {
   return serviceClient;
 }
 
+/**
+ * Anon-key client. Used for verifying a caller's access token and for
+ * verifyOtp during dev session minting. Never used for privileged writes.
+ */
+export function getAnonClient(): SupabaseClient {
+  if (!anonClient) {
+    const env = getEnv();
+    anonClient = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+  }
+  return anonClient;
+}
+
 /** Test hook only. */
 export function resetSupabaseClient(): void {
   serviceClient = undefined;
+  anonClient = undefined;
 }
 
 const PING_TIMEOUT_MS = 3000;

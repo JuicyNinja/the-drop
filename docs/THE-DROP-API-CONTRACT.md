@@ -89,6 +89,7 @@ Error:
 | `RATE_LIMITED` | 429 | |
 | `VALIDATION_ERROR` | 422 | |
 | `INTERNAL_ERROR` | 500 | Unexpected server failure. `details` is always `{}`; internals are never exposed |
+| `NOT_IMPLEMENTED` | 501 | A route exists but a step it depends on is not built yet. Names the pending work package in `details`. Never used for a genuine failure |
 | `NOT_READY` | 503 | `GET /v1/ready` only. A dependency did not respond; `details.checks` names each |
 
 ### 1.5 Pagination
@@ -131,57 +132,142 @@ An unconfigured environment is also `503 NOT_READY`, with `details.env` listing 
 
 ## 2. AUTH AND REGISTRATION
 
+### Session model and security posture — DOCTRINE
+
+The session is a Supabase Auth JWT, the same token for web and native. The web
+client is a plain Bearer client: it stores the tokens itself and sends
+`Authorization: Bearer <jwt>`. There is no cookie path. Because the refresh
+token therefore lives in browser-accessible storage, the following constraints
+close the XSS surface and MUST NOT be relaxed:
+
+- **Access token in memory only.** Never localStorage, never sessionStorage. It
+  is lost on reload and re-obtained via the refresh token. Access token TTL is
+  15 minutes.
+- **Refresh token rotation with reuse detection.** Every refresh returns a new
+  token; a replayed token invalidates the whole family and forces re-auth. This
+  is delegated to GoTrue (rotation and reuse detection enabled), which is the
+  authority on sessions.
+- **No `dangerouslySetInnerHTML` anywhere.** Enforced by lint at error level.
+- **All authored text is rendered as text, never HTML**, and sanitized on write
+  — drop titles, descriptions, terms, whisper notes, handles, org names.
+- **Strict CSP** on every response: no `unsafe-inline`, no `unsafe-eval`, a
+  per-request script nonce, explicit `connect-src`.
+- **`state` is single-use and expires in 10 minutes**, and `return_to` is
+  validated against internal paths only before any redirect. An open redirect in
+  the callback is the other way this gets exploited.
+
+### `POST /v1/auth/oauth/start`
+Begins the flow. Server-side PKCE: the code verifier and the validated
+`return_to` are held in Redis keyed by a single-use `state`.
+
+```json
+{ "provider": "google" | "apple", "return_to": "/drops/abc123" }
+```
+```json
+{ "data": { "authorize_url": "https://…", "state": "…" } }
+```
+
+The client opens `authorize_url`. The provider returns to the callback with the
+same `state`.
+
 ### `POST /v1/auth/oauth/callback`
-Exchanges an OAuth code for a session. Returns whether registration is complete.
+Exchanges an OAuth code for a session. Consumes the `state` (single-use),
+exchanges the code for an identity, mints the session, and reports registration
+status and the preserved intent.
 
 ```json
 {
   "data": {
-    "session": { "access_token": "...", "refresh_token": "..." },
+    "session": { "access_token": "…", "refresh_token": "…", "expires_in": 900, "expires_at": 0, "token_type": "bearer" },
     "registration_complete": false,
-    "missing_fields": ["phone", "address", "handle"],
+    "missing_fields": ["handle", "phone", "address"],
     "return_to": "/drops/abc123"
   }
 }
 ```
 
-`return_to` carries the pre-auth intent through the round trip. **The client MUST honor it.** A user arriving from a shared drop link returns to that exact drop, unlocked.
+`return_to` carries the pre-auth intent through the round trip. **The client
+MUST honor it.** A user arriving from a shared drop link returns to that exact
+drop, unlocked.
+
+Errors: `UNAUTHENTICATED` (invalid/expired state), `VALIDATION_ERROR`.
+
+### `POST /v1/auth/refresh`
+Rotates a refresh token. Returns a new session; a stale or replayed token is
+`UNAUTHENTICATED`.
+
+```json
+{ "refresh_token": "…" }  →  { "data": { "session": { … } } }
+```
 
 ### `POST /v1/auth/register/complete`
-Collects the fields OAuth does not supply.
+Collects the fields OAuth does not supply. Requires a valid session.
 
 ```json
 {
   "full_name": "string",
   "handle": "string",
   "phone": "+1...",
-  "address": { "label": "Home", "line1": "...", "city": "...", "region": "...", "postal_code": "..." }
+  "address": { "label": "Home", "line1": "...", "city": "...", "region": "...", "postal_code": "...", "country": "US" }
 }
 ```
-Assigns `user_number` from the sequence. Sets the address as Home and active. Triggers SMS verification.
+Assigns `user_number` from the sequence, sets the address as Home and active,
+sends the SMS code, and sends the profile-completion email. Full profile
+configuration (preference tags, extra addresses, Fanatics) is deferred to that
+email, not a signup blocker.
 
-Errors: `HANDLE_TAKEN`, `VALIDATION_ERROR`
+**Handle format** (validated identically client and server; rejected with
+`VALIDATION_ERROR` naming the specific rule):
+- 3–20 characters, lowercase `a–z`, digits, and underscore; input is lowercased.
+- No leading/trailing underscore, no consecutive underscores.
+- Must contain at least one letter.
+- Uniqueness is enforced on a **normalized form** (underscores stripped; `0→o`,
+  `1→l`, `5→s`, `rn→m`, `vv→w`), so confusable handles cannot coexist.
+- Reserved handles (system, profanity, brand) return `HANDLE_TAKEN` — the
+  namespace never reveals which names are special.
+
+Errors: `HANDLE_TAKEN`, `VALIDATION_ERROR`.
+
+### `GET /v1/users/me/handle-search?handle=`
+Availability check for the registration UI. Rate limited 60/min per user.
+```json
+{ "data": { "available": false, "reason": "taken" } }
+```
 
 ### `POST /v1/auth/phone/verify/send`
 ### `POST /v1/auth/phone/verify/confirm`
-`{ "code": "123456" }` — sets `phone_verified_at`.
+`{ "code": "123456" }` — sets `phone_verified_at`. Send is rate limited 5/hour
+per phone; a code expires in 10 minutes and burns after a few wrong attempts.
+The SMS goes through a provider interface; a dev sender logs the code when
+Twilio is not configured.
 
 ### `POST /v1/users/me/location-permission`
 ```json
 { "granted": true }
 ```
-Sets `location_perm_granted_at`. **Hard gate.** Until non-null, `POST /catches` and `POST /redemptions` both return `LOCATION_PERMISSION_REQUIRED`.
-
-Permission denial is a blocking state, never an alternate path.
+Sets `location_perm_granted_at`. **Hard gate.** Until non-null, `POST /catches`
+and `POST /redemptions` both return `LOCATION_PERMISSION_REQUIRED`. Denial is a
+blocking state, never an alternate path.
 
 ### `GET /v1/users/me`
-Full profile: identity, `user_number`, roles, clout tier, badges, addresses, active address, follows, preference tags.
+Full self profile: `user_number` (raw and zero-padded to 14 for display),
+handle, identity, roles, clout tier, badges, addresses, active address, follows,
+preference tags, notification prefs, and walkthrough state. The auth uid is
+never included.
 
 ### `PATCH /v1/users/me`
 Mutable: `full_name`, `handle` (once), `email`, notification prefs.
-Immutable — rejected with 422: `user_number`, `phone` (separate verified flow), `handle` after first change.
+Immutable — rejected with `VALIDATION_ERROR`: `user_number`, `phone` (separate
+verified flow), and any unknown field. `handle` after the first change is
+`HANDLE_LOCKED`.
 
-Errors: `HANDLE_LOCKED`, `HANDLE_TAKEN`
+Errors: `HANDLE_LOCKED`, `HANDLE_TAKEN`, `VALIDATION_ERROR`.
+
+### `POST /v1/users/me/walkthrough/complete`
+### `POST /v1/users/me/walkthrough/skip`
+First-session tooltip walkthrough. Both set `walkthrough_completed_at` (a
+nullable timestamp, per account so a second device does not replay it). Skip
+exists so a dismissed walkthrough does not replay forever.
 
 ---
 

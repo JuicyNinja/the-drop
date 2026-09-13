@@ -20,13 +20,21 @@ registry.registerComponent("securitySchemes", BEARER_AUTH, {
 const registered = new Set<string>();
 
 /**
- * Guard against two definitions claiming the same method and path. A
- * duplicate is a bug in the route tree, not something to merge silently.
+ * Claim a method+path. Returns true when the caller should register into the
+ * OpenAPI registry, false when it should skip (an already-claimed route).
+ *
+ * A genuine double-definition is a bug in the route tree, so outside the Next
+ * server runtime — the OpenAPI generator and vitest, where each route file is
+ * imported exactly once — a re-claim throws. Inside `next dev`, hot-reload
+ * re-evaluates a route module against the surviving registry; there a re-claim
+ * is expected and simply skips re-registration.
  */
-export function claimRoute(method: string, path: string): void {
+export function claimRoute(method: string, path: string): boolean {
   const key = `${method.toUpperCase()} ${path}`;
   if (registered.has(key)) {
+    if (process.env.NEXT_RUNTIME) return false; // HMR re-evaluation
     throw new Error(`Route already defined: ${key}`);
   }
   registered.add(key);
+  return true;
 }

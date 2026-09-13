@@ -25,6 +25,28 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.url(),
   /** Upstash → database → REST API → UPSTASH_REDIS_REST_TOKEN */
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
+
+  /**
+   * Public base URL of the web app (no trailing slash). The OAuth redirect
+   * URI is built from it, and `return_to` values are validated as internal
+   * paths against it. Local: http://127.0.0.1:3000.
+   */
+  APP_URL: z.url(),
+
+  // --- SMS (Twilio). Absent → dev sender that logs the code. ---
+  TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
+  TWILIO_AUTH_TOKEN: z.string().min(1).optional(),
+  TWILIO_FROM_NUMBER: z.string().min(1).optional(),
+
+  // --- Email (Resend). Absent → dev sender that logs the message. ---
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM: z.string().min(1).optional(),
+
+  // --- OAuth identity providers. Absent → dev identity provider. ---
+  GOOGLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+  APPLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+  APPLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
