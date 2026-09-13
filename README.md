@@ -40,6 +40,28 @@ The same applies on deploy: after pushing migrations to a hosted Supabase
 project, its PostgREST reloads on its own within a minute, or send the same
 `NOTIFY pgrst, 'reload schema'` to make it immediate.
 
+### Geocoding (Google)
+
+Addresses are geocoded server-side through `lib/geo/geocoder.ts`. With no key,
+a deterministic dev geocoder runs (no network). To use the real Google
+Geocoding API, set `GOOGLE_GEOCODING_API_KEY` and it swaps in automatically.
+
+To create and restrict the key in Google Cloud Console:
+
+1. Create or select a project, then enable billing (Billing → link a billing account).
+2. APIs & Services → Library → enable **Geocoding API**.
+3. APIs & Services → Credentials → Create credentials → **API key**.
+4. Edit the key → **API restrictions** → Restrict key → select **Geocoding API** only.
+5. **Application restrictions**: this key is used only from the server, so restrict
+   by **IP address** to your server/egress IPs (not HTTP referrers — those are for
+   browser keys, and this key must never reach the browser).
+6. Put the value in `GOOGLE_GEOCODING_API_KEY` (server env; never `NEXT_PUBLIC_`).
+
+Geocoding runs only on address create or on an edit that changes a line of the
+address; a label- or radius-only edit does not call Google. Zero-result,
+ambiguous, and partial matches are rejected with `VALIDATION_ERROR` rather than
+stored as a wrong coordinate.
+
 ### Gates
 
 ```bash

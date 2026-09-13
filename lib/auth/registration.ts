@@ -3,6 +3,7 @@ import { normalizeHandle, validateHandle } from "@/lib/handles";
 import { sanitizeText } from "@/lib/sanitize";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getUserById, normalizeUserRow, type UserRecord } from "@/lib/users";
+import { getGeocoder } from "@/lib/geo/geocoder";
 
 /**
  * Registration completion: turns an authenticated identity (email from OAuth)
@@ -103,7 +104,19 @@ export async function completeRegistration(
   const line2 = addr.line2 ? sanitizeText(addr.line2, 200) : "";
   const country = addr.country ? sanitizeText(addr.country, 2) : "US";
 
-  const { data, error } = await getServiceClient().rpc("app_complete_registration", {
+  // Geocode the Home address server-side before creating anything: a bad
+  // address fails here rather than seeding a coordinate-less Home.
+  const geo = await getGeocoder().geocode({
+    line1,
+    line2: line2 || null,
+    city,
+    region,
+    postal_code: postal,
+    country,
+  });
+
+  const svc = getServiceClient();
+  const { data, error } = await svc.rpc("app_complete_registration", {
     p_user_id: authUserId,
     p_handle: handle,
     p_full_name: fullName,
@@ -131,5 +144,22 @@ export async function completeRegistration(
     throw new Error(`registration failed: ${error.message}`);
   }
 
-  return normalizeUserRow(data as Record<string, unknown>);
+  const user = normalizeUserRow(data as Record<string, unknown>);
+
+  // Store the geocode on the just-created Home address.
+  if (user.active_address_id) {
+    const { error: geoErr } = await svc
+      .from("addresses")
+      .update({
+        lat: geo.lat,
+        lng: geo.lng,
+        formatted_address: geo.formatted_address,
+        geo_location_type: geo.location_type,
+        geocoded_at: new Date().toISOString(),
+      })
+      .eq("id", user.active_address_id);
+    if (geoErr) throw new Error(`home geocode store failed: ${geoErr.message}`);
+  }
+
+  return user;
 }

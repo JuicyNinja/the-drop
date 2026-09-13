@@ -41,7 +41,7 @@ describe.skipIf(!databaseUrl)("WP-2 acceptance gate (database invariants)", () =
   });
 
   it("founder is exactly user_number 1", () => {
-    const f = report.facts.find((x) => x.label === "founder user_number");
+    const f = report.facts.find((x) => x.label === "founder user_number (by email) is 1");
     expect(f?.value).toBe("1");
   });
 });

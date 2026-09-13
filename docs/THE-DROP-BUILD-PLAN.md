@@ -171,6 +171,16 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Active address is never consulted by any redemption code path — verified by test
 - Drift suggestion never mutates the active address automatically
 
+**Decisions recorded 2026-09-13 (during WP-4 execution):**
+
+- **Geocoder is Google Geocoding API** behind `lib/geo/geocoder.ts` (one interface, one file, no route calls Google directly), chosen for US residential/apartment/new-construction accuracy since volume is trivial (~2–3 lookups per buyer lifetime). Env var `GOOGLE_GEOCODING_API_KEY`; absent → a deterministic dev geocoder (no network) so the flow is fully testable now. Coordinates are cached permanently: geocoding runs only on create or on an edit that changes a line of the address (label/radius edits do not). Zero-result, ambiguous, and partial matches are rejected with VALIDATION_ERROR carrying the provider's response — never stored as a wrong coordinate. GCP key creation + restriction steps are in README.
+- **Client never supplies lat/lng.** The create and patch bodies are strict; `lat`/`lng` (or any unknown key) are rejected with VALIDATION_ERROR. A client coordinate is a spoofed market (invariant #10).
+- **Home is created and geocoded at registration.** WP-3's registration deferred geocoding; WP-4 makes `register/complete` geocode the Home address so the active market resolves immediately.
+- **Active address governs discovery only.** The Local board is built on `app_discover_local_drops` (live local drops within the active address's radius, earthdistance) and `resolveActiveMarket`; both read the active address. Grep-verified that no redemption/geofence code path reads it, and the `redemptions` table carries its own GPS columns with no address linkage. The full board/ranking is WP-11; WP-4 ships the discovery seam.
+- **Drift is advisory.** `GET /v1/users/me/location-drift` takes the current GPS position and suggests a closer saved address; it never mutates the active address. Switching is always the explicit `PUT /v1/users/me/active-address`.
+- **Home protection + fallback.** Home is undeletable; deleting the active address falls back to Home so a user is never left without a market.
+- **The gate is `npm run wp4:gate`** (`scripts/wp4-gate.ts`) against a running dev server; Google failure handling is unit-tested in `tests/geocoder.test.ts`.
+
 ---
 
 ## WP-5 — Merchant org and locations
@@ -267,6 +277,7 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Outside geofence with a good fix returns `OUTSIDE_GEOFENCE`
 - No merchant-side redemption endpoint exists in the codebase
 - Unverified flag never appears in any buyer-facing response
+- Re-run the active-address grep against the now-existing redemption and geofence code paths; no redemption path reads the active address (WP-4 gate item #2 becomes testable only once redemption exists) — **grep-verified**
 
 ---
 

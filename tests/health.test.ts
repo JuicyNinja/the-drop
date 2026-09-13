@@ -22,6 +22,7 @@ describe("GET /v1/health (API-CONTRACT §1.7, liveness)", () => {
     // at unroutable hosts and confirm no request is attempted.
     stubValidEnv({
       APP_ENV: "production",
+      GOOGLE_GEOCODING_API_KEY: "prod-key", // required in production (dev geocoder must not ship)
       NEXT_PUBLIC_SUPABASE_URL: "http://192.0.2.1:1",
       UPSTASH_REDIS_REST_URL: "http://192.0.2.1:2",
     });

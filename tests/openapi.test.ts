@@ -27,6 +27,8 @@ describe("openapi.json (the native contract)", () => {
     const doc = await generateOpenApiDocument(ROOT);
     expect(doc.openapi).toBe("3.1.0");
     expect(Object.keys(doc.paths ?? {})).toEqual([
+      "/v1/addresses",
+      "/v1/addresses/{id}",
       "/v1/auth/oauth/callback",
       "/v1/auth/oauth/start",
       "/v1/auth/phone/verify/confirm",
@@ -37,7 +39,9 @@ describe("openapi.json (the native contract)", () => {
       "/v1/health",
       "/v1/ready",
       "/v1/users/me",
+      "/v1/users/me/active-address",
       "/v1/users/me/handle-search",
+      "/v1/users/me/location-drift",
       "/v1/users/me/location-permission",
       "/v1/users/me/walkthrough/complete",
       "/v1/users/me/walkthrough/skip",

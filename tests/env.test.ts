@@ -32,6 +32,19 @@ describe("lib/env", () => {
     ).toThrow("UPSTASH_REDIS_REST_TOKEN is required");
   });
 
+  it("requires GOOGLE_GEOCODING_API_KEY in production (dev geocoder must not ship)", () => {
+    expect(() => parseEnv({ ...VALID_ENV, APP_ENV: "production" })).toThrow(
+      /GOOGLE_GEOCODING_API_KEY is required/,
+    );
+    // Present in production → fine.
+    expect(
+      parseEnv({ ...VALID_ENV, APP_ENV: "production", GOOGLE_GEOCODING_API_KEY: "k" }).APP_ENV,
+    ).toBe("production");
+    // Not required outside production.
+    expect(parseEnv({ ...VALID_ENV, APP_ENV: "staging" }).APP_ENV).toBe("staging");
+    expect(parseEnv({ ...VALID_ENV, APP_ENV: "local" }).APP_ENV).toBe("local");
+  });
+
   it("names an invalid value: 'X is invalid: ...'", () => {
     expect(() =>
       parseEnv({ ...VALID_ENV, NEXT_PUBLIC_SUPABASE_URL: "not a url" }),

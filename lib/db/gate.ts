@@ -125,9 +125,12 @@ export async function runGate(
       id: string; user_number: string; handle: string; full_name: string; email: string;
       email_verified_at: string | null; phone_verified_at: string | null;
       location_perm_granted_at: string | null;
-    }>("select id, user_number, handle, full_name, email, email_verified_at, phone_verified_at, location_perm_granted_at from users where user_number = 1");
+    }>("select id, user_number, handle, full_name, email, email_verified_at, phone_verified_at, location_perm_granted_at from users where email = 'info@juicyninja.com'");
 
-    fact("founder user_number", founder?.user_number ?? "missing", founder?.user_number === "1");
+    // Keyed on the founder's email, not on sequence position, so the gate does
+    // not depend on a pristine DB: later packages register real users and
+    // advance user_number_seq, but the founder is always number 1.
+    fact("founder user_number (by email) is 1", founder?.user_number ?? "missing", founder?.user_number === "1");
     fact("founder identity", founder ? `${founder.full_name} / @${founder.handle} / ${founder.email}` : "missing",
       founder?.full_name === "Tad Timothy" && founder?.handle === "tad" && founder?.email === "info@juicyninja.com");
     fact("founder id is the auth uid", founder?.id ?? "missing", founder?.id === FOUNDER_ID);
@@ -149,7 +152,10 @@ export async function runGate(
         "select (case when is_called then last_value + 1 else last_value end)::text as next from user_number_seq",
       ))[0].next;
     const seqBefore = await nextUserNumber();
-    fact("next user_number before seed re-run", seqBefore, seqBefore === "2");
+    // Founder consumed 1, so the next value is always ≥ 2. The exact value
+    // depends on how many real users exist, which is not the gate's concern —
+    // the idempotency check below (before === after) is what matters.
+    fact("next user_number is past the founder (≥ 2)", seqBefore, Number(seqBefore) >= 2);
 
     const [tags] = await q<{ groups: string; leaves: string; synonyms: string; local: string; maker: string; digital: string }>(`
       select

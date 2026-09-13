@@ -10,7 +10,7 @@ import { z } from "@/lib/zod";
  * Do not read `process.env` anywhere else in the codebase. Add a variable
  * here, then document where it comes from in `.env.example`.
  */
-const envSchema = z.object({
+const envObject = z.object({
   /** Which deployment this is. Set per Vercel environment; `local` for dev. */
   APP_ENV: z.enum(["local", "staging", "production"]),
 
@@ -47,11 +47,30 @@ const envSchema = z.object({
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
   APPLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
   APPLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+
+  // --- Geocoding (Google). Absent → dev geocoder (deterministic, no network). ---
+  GOOGLE_GEOCODING_API_KEY: z.string().min(1).optional(),
 });
 
-export type Env = z.infer<typeof envSchema>;
+/**
+ * Production guard: the dev geocoder returns plausible coordinates, so a
+ * missing key in production would fail SILENTLY — every buyer geocoded into the
+ * wrong market with no error anywhere. Require the real key in production, the
+ * same as any other required var, so it fails loudly at boot instead.
+ */
+const envSchema = envObject.superRefine((val, ctx) => {
+  if (val.APP_ENV === "production" && !val.GOOGLE_GEOCODING_API_KEY) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["GOOGLE_GEOCODING_API_KEY"],
+      message: "is required when APP_ENV=production (the dev geocoder must never run in production)",
+    });
+  }
+});
 
-export const ENV_VARIABLE_NAMES = Object.keys(envSchema.shape) as (keyof Env)[];
+export type Env = z.infer<typeof envObject>;
+
+export const ENV_VARIABLE_NAMES = Object.keys(envObject.shape) as (keyof Env)[];
 
 export class EnvError extends Error {
   readonly problems: readonly string[];
