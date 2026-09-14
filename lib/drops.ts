@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/api/errors";
 import { sanitizeText } from "@/lib/sanitize";
 import { getServiceClient } from "@/lib/supabase/server";
-import { seedInventory } from "@/lib/redis";
+import { seedDropMeta, seedInventory } from "@/lib/redis";
 import { consumeDropAllowance, currentCycle, type OrgLimits } from "@/lib/billing/allowance";
 import { upgradeOptions } from "@/lib/billing/tiers";
 import { getOrg } from "@/lib/orgs";
@@ -284,7 +284,7 @@ export async function runGoLive(now: Date = new Date()): Promise<{ went_live: st
   const svc = getServiceClient();
   const { data, error } = await svc
     .from("drops")
-    .select("id, quantity_total")
+    .select("id, quantity_total, title, live_until, redeem_until")
     .eq("status", "scheduled")
     .lte("live_at", now.toISOString());
   if (error) throw new Error(`go-live query failed: ${error.message}`);
@@ -307,10 +307,19 @@ export async function runGoLive(now: Date = new Date()): Promise<{ went_live: st
       continue;
     }
     if (!won || won.length === 0) continue; // lost the race; another ticker has it
-    // Seed Redis inventory for the live window (the catch contract, WP-7,
-    // consumes this). SET NX is a second guard: even a duplicate reaches here
-    // only via the winning update, and NX makes re-seeding a no-op regardless.
-    await seedInventory(id, d.quantity_total as number);
+    // Seed Redis inventory + meta for the live window (the catch contract
+    // consumes both). SET NX on inventory is a second guard: even a duplicate
+    // reaches here only via the winning update, and NX makes re-seeding a
+    // no-op regardless. Meta lets the catch hot path decide Gone with zero DB.
+    const qt = d.quantity_total as number;
+    const liveUntil = d.live_until as string | null;
+    await seedInventory(id, qt);
+    await seedDropMeta(id, {
+      qt,
+      lu: liveUntil ? new Date(liveUntil).getTime() : null,
+      ru: (d.redeem_until as string | null) ?? null,
+      title: d.title as string,
+    });
     wentLive.push(id);
   }
   return { went_live: wentLive };

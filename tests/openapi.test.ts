@@ -66,8 +66,14 @@ describe("openapi.json (the native contract)", () => {
     const me = (doc.paths?.["/v1/users/me"] as { get: { security: unknown[]; responses: Record<string, unknown> } }).get;
     expect(me.security).toEqual([{ bearerAuth: [] }]);
     expect(Object.keys(me.responses)).toContain("401");
+    // Catches is fully built (WP-7): 201 success, 409 DROP_GONE, no 501 shell.
     const catches = (doc.paths?.["/v1/catches"] as { post: { responses: Record<string, unknown> } }).post;
-    expect(Object.keys(catches.responses)).toContain("501");
+    expect(Object.keys(catches.responses)).toContain("201");
+    expect(Object.keys(catches.responses)).toContain("409");
+    expect(Object.keys(catches.responses)).not.toContain("501");
+    // The per-drop stats route is still a WP-13 placeholder (501).
+    const stats = (doc.paths?.["/v1/drops/{id}/stats"] as { get: { responses: Record<string, unknown> } }).get;
+    expect(Object.keys(stats.responses)).toContain("501");
   });
 
   it("documents both operational routes as header-exempt and unauthenticated", async () => {

@@ -1,20 +1,16 @@
 import { z } from "@/lib/zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route";
-import { getServiceClient } from "@/lib/supabase/server";
+import { catchDrop } from "@/lib/catches";
 
 /**
- * API-CONTRACT §5: the catch. WP-3 builds the pre-flight chain in the
- * contract's exact order; the atomic Redis DECR, position derivation, code
- * minting, and async write are WP-7.
+ * API-CONTRACT §5: the catch. The single most important endpoint in the system.
  *
- * The unbuilt step returns NOT_IMPLEMENTED (501), never INTERNAL_ERROR: a 501
- * that names the missing step is self-explanatory and cannot be confused with
- * a genuine 500 in a later package. The WP-7 gate asserts no NOT_IMPLEMENTED
- * remains here, and the v1 release gate greps the whole tree for it.
- *
- * Order (auth "user" already enforced UNAUTHENTICATED then ACCOUNT_SUSPENDED):
- *   LOCATION_PERMISSION_REQUIRED → Idempotency-Key → NOT_FOUND → DROP_NOT_LIVE
+ * The route enforces the pre-flight gates in order — auth and suspension (auth
+ * "user"), the location hard gate, and the mandatory Idempotency-Key — then
+ * hands off to the catch contract (lib/catches.ts), which owns the atomic Redis
+ * DECR, position derivation, code minting, and the follow-up Postgres write.
+ * The contract decides DROP_GONE from Redis alone, with no database round trip.
  */
 const route = defineRoute(
   {
@@ -22,11 +18,11 @@ const route = defineRoute(
     path: "/v1/catches",
     operationId: "createCatch",
     summary: "Catch a drop",
-    description: "Pre-flight validation is live in WP-3; the atomic catch is WP-7.",
     tags: ["Catches"],
     auth: "user",
     request: { body: z.object({ drop_id: z.uuid() }) },
     response: {
+      status: 201,
       data: z.object({
         catch_id: z.string(),
         position_number: z.number(),
@@ -35,24 +31,14 @@ const route = defineRoute(
         drop: z.object({ id: z.string(), title: z.string() }),
       }),
     },
-    errors: [
-      "LOCATION_PERMISSION_REQUIRED",
-      "DROP_GONE",
-      "DROP_NOT_LIVE",
-      "ALREADY_CAUGHT",
-      "NOT_FOUND",
-      "NOT_IMPLEMENTED",
-    ],
+    errors: ["LOCATION_PERMISSION_REQUIRED", "DROP_GONE", "DROP_NOT_LIVE", "ALREADY_CAUGHT", "NOT_FOUND"],
   },
   async ({ body, request, user }) => {
     if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
 
-    // Location is the hard gate. Denied/never-granted cannot catch (PRD §7.4).
+    // Location is the hard gate (PRD §7.4). Denied/never-granted cannot catch.
     if (user.location_perm_granted_at === null) {
-      throw new ApiError(
-        "LOCATION_PERMISSION_REQUIRED",
-        "Location permission is required to catch.",
-      );
+      throw new ApiError("LOCATION_PERMISSION_REQUIRED", "Location permission is required to catch.");
     }
 
     // Idempotency-Key is mandatory: a dropped response must not consume a unit.
@@ -63,23 +49,16 @@ const route = defineRoute(
       });
     }
 
-    const { data: drop, error } = await getServiceClient()
-      .from("drops")
-      .select("id, status")
-      .eq("id", body.drop_id)
-      .maybeSingle();
-    if (error) throw new Error(`load drop failed: ${error.message}`);
-    if (!drop) throw new ApiError("NOT_FOUND", "No such drop.");
-    if (drop.status !== "live") {
-      throw new ApiError("DROP_NOT_LIVE", "This drop is not live.");
-    }
-
-    // Everything past here — Redis DECR, position, code, async write — is WP-7.
-    throw new ApiError(
-      "NOT_IMPLEMENTED",
-      "The catch contract (Redis inventory and position assignment) is not built yet.",
-      { pending_work_package: "WP-7", step: "redis_decr_and_catch_write" },
-    );
+    const result = await catchDrop(user.id, body.drop_id, idempotencyKey);
+    return {
+      data: {
+        catch_id: result.catch_id,
+        position_number: result.position_number,
+        code: result.code,
+        expires_at: result.expires_at,
+        drop: result.drop,
+      },
+    };
   },
 );
 

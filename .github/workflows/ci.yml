@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  schedule:
+    - cron: "0 7 * * *"  # nightly, for the catch-contract load test
 
 # Each gate is its own named job so a failure names the gate that failed.
 # The OpenAPI drift check is deliberately separate: openapi.json is the native
@@ -95,3 +97,47 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+
+  # The catch-contract load test (WP-7). Runs on merge to master and nightly,
+  # NOT on every PR (it is slow). It is the regression guard that keeps oversell
+  # impossible as later packages touch the catch paths. Real Postgres (Supabase)
+  # + real Redis behind SRH (Upstash REST protocol). CI scale is reduced to
+  # 1,000 x 3 for reliability — still far above the 100-unit contention point,
+  # so any non-atomic regression oversells and fails here.
+  load-test:
+    name: load-test (catch contract)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+      # Local Redis behind SRH (Upstash REST protocol), on a docker network.
+      - name: Start Redis + SRH
+        run: |
+          docker network create thedrop
+          docker run -d --name redis --network thedrop redis:7-alpine
+          docker run -d --name srh --network thedrop -p 8079:80             -e SRH_MODE=env -e SRH_TOKEN=ci_srh_token             -e SRH_CONNECTION_STRING=redis://redis:6379             hiett/serverless-redis-http:latest
+          for i in $(seq 1 30); do curl -sf -X POST http://localhost:8079/ -H "authorization: Bearer ci_srh_token" -H "content-type: application/json" -d '["PING"]' && break; sleep 1; done
+      - name: Reload PostgREST schema cache
+        run: |
+          node -e "const{Client}=require('pg');(async()=>{const c=new Client({connectionString:'postgresql://postgres:postgres@127.0.0.1:54322/postgres'});await c.connect();await c.query(\"notify pgrst, 'reload schema'\");await c.end()})()"
+      - name: Run the load test (1,000 x 3)
+        run: npm run wp7:gate
+        env:
+          APP_ENV: local
+          APP_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+          SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+          UPSTASH_REDIS_REST_URL: http://localhost:8079
+          UPSTASH_REDIS_REST_TOKEN: ci_srh_token
+          LOADTEST_USERS: "1000"
+          LOADTEST_RUNS: "3"

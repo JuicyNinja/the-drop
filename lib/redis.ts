@@ -63,12 +63,51 @@ export async function seedInventory(
 }
 
 /**
+ * Optional observer of every DECR, for load-test instrumentation only (records
+ * timestamps to measure achieved concurrency). Never set in production.
+ */
+let decrObserver: ((dropId: string, at: number) => void) | undefined;
+export function setDecrObserver(fn: ((dropId: string, at: number) => void) | undefined): void {
+  decrObserver = fn;
+}
+
+/**
  * Atomic DECR. Returns the counter's value after the decrement. A value below
  * zero is Gone: the caller rejects immediately with no database round trip
- * and no re-increment. Position derivation from this value belongs to WP-7.
+ * and no re-increment.
  */
 export async function decrementInventory(dropId: string): Promise<number> {
+  decrObserver?.(dropId, Date.now());
   return redis().decr(inventoryKey(dropId));
+}
+
+/** Read the current inventory value without decrementing (reconciliation). */
+export async function readInventory(dropId: string): Promise<number | null> {
+  const v = await redis().get<number>(inventoryKey(dropId));
+  return v ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Drop meta, seeded at go-live so the catch hot path never reads Postgres:
+// quantity_total (for position math), the live-window close time, and the
+// redemption window + title for the response. A Gone decision is then purely
+// Redis: read meta, DECR, reject on < 0 — zero DB round trip.
+// ---------------------------------------------------------------------------
+export interface DropMeta {
+  qt: number; // quantity_total
+  lu: number | null; // live_until epoch millis (catch window close)
+  ru: string | null; // redeem_until ISO (catch expires_at)
+  title: string;
+}
+
+const metaKey = (dropId: string) => `drop:${dropId}:meta`;
+
+export async function seedDropMeta(dropId: string, meta: DropMeta): Promise<void> {
+  await redis().set(metaKey(dropId), meta);
+}
+
+export async function getDropMeta(dropId: string): Promise<DropMeta | null> {
+  return (await redis().get<DropMeta>(metaKey(dropId))) ?? null;
 }
 
 /**

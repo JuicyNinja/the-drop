@@ -371,12 +371,16 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "reconciled": {
+                "type": "number"
               }
             },
             "required": [
               "went_live",
               "gone",
-              "expired"
+              "expired",
+              "reconciled"
             ]
           },
           "meta": {
@@ -3448,7 +3452,6 @@
       "post": {
         "operationId": "createCatch",
         "summary": "Catch a drop",
-        "description": "Pre-flight validation is live in WP-3; the atomic catch is WP-7.",
         "tags": [
           "Catches"
         ],
@@ -3506,7 +3509,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Success",
             "content": {
               "application/json": {
@@ -3568,16 +3571,6 @@
           },
           "500": {
             "description": "Error. code: INTERNAL_ERROR",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Error. code: NOT_IMPLEMENTED",
             "content": {
               "application/json": {
                 "schema": {

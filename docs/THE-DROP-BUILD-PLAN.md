@@ -281,6 +281,20 @@ Wire this in WP-13 (operator surfaces) or the deployment step; the job functions
 
 **This gate does not pass on unit tests.** Run the load test against staging with real Redis and real Postgres.
 
+**Decisions recorded 2026-09-14 (during WP-7 execution):**
+
+- **Hot path is Redis-only through the Gone decision.** Go-live seeds `drop:{id}:inventory` (SET NX) and `drop:{id}:meta` (quantity_total, live-window close, redeem window, title). A catch reads meta, checks the window, claims the Idempotency-Key (SET NX EX 24h) BEFORE the DECR, then `DECR inventory`. A value < 0 is DROP_GONE — returned with **zero Postgres round trips** (proven mechanically by counting PostgREST calls during a Gone against an exhausted drop: 0; a successful catch: exactly 1). Postgres is touched only to distinguish NOT_FOUND from DROP_NOT_LIVE when a drop is not seeded at all.
+- **Position = quantity_total − post-decrement value** (first catch → 1). The Postgres write follows the committed Redis decision; a failed write BURNS the position (the gap is correct and never reused, because DECR only decreases). ALREADY_CAUGHT is the `one_catch_per_buyer_per_drop` unique violation on `original_user_id`, so catch → transfer → catch is refused at the database.
+- **Idempotency** claims the key before the DECR; a replay returns the stored result (success or the Gone/error outcome) and consumes no second unit. Proven: 50 replays → one unit, one row, same position.
+- **Reconciliation** (60s) writes `quantity_remaining` DOWNWARD only, to the Redis value, and never writes back to Redis; drift (burned positions) is logged, not corrected.
+- **The Postgres write is awaited in the request** (so the response carries the real `catch_id` and the gate can count rows). Production may move it to a queue for lower latency with identical burn semantics; reconciliation is the safety net.
+- **Load test harness (per the 2026-09-14 decision).** The 5,000-concurrent test drives `lib/catches.ts` directly against real Redis and real Postgres, because the HTTP auth layer loads the user row on every request (a DB round trip that would make the no-round-trip claim untestable at the HTTP layer) and would bottleneck on GoTrue rather than the catch contract. The HTTP endpoint is proven separately end-to-end. The report states achieved concurrency (max in-flight + DECR timestamp spread), not the requested count, and runs the test five times.
+- **Redis for the load test is a local Redis behind SRH** (serverless-redis-http), which speaks the exact Upstash REST protocol. Chosen because one 5,000-request run (~20k commands) would blow the Upstash free-tier daily cap and a mid-run rate limit would masquerade as a concurrency bug. SRH↔Upstash-cloud DECR parity is checked (300 concurrent DECRs, identical final state) so the substitution is trusted. **The load test ran against SRH, not the production Upstash provider.**
+
+- **CI regression guard.** The load test is a CI job (`load-test`) that runs on merge to master and nightly (not on every PR — it is slow), against a Supabase stack plus local Redis behind SRH. Every later package touches code near the catch paths, so this is what keeps oversell impossible without someone remembering to re-run it. **CI scale is a reduced 1,000 × 3** (`LOADTEST_USERS`/`LOADTEST_RUNS`), not the full 5,000 × 5: 1,000 concurrent is still an order of magnitude above the 100-unit contention point, so a reintroduced non-atomic check oversells and fails here, while the smaller scale keeps the job fast and reliable enough that it will not be disabled for flakiness. The full 5,000 × 5 remains the local/manual `npm run wp7:gate` default.
+
+**PRE-LAUNCH (deployment prerequisite):** re-validate the burst path against the real Upstash cloud database before production traffic, at whatever scale the paid tier allows. SRH is a faithful local stand-in, not proof the production provider behaves identically under burst.
+
 ---
 
 ## WP-8 — Redemption

@@ -3,6 +3,8 @@ import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route";
 import { isAdmin } from "@/lib/auth/org-access";
 import { runClose, runGoLive } from "@/lib/drops";
+import { reconcileDrop } from "@/lib/catches";
+import { getServiceClient } from "@/lib/supabase/server";
 
 /**
  * Run one scheduler tick: go-live (scheduled → live, seed Redis) and close
@@ -23,6 +25,7 @@ const route = defineRoute(
         went_live: z.array(z.string()),
         gone: z.array(z.string()),
         expired: z.array(z.string()),
+        reconciled: z.number(),
       }),
     },
     errors: ["FORBIDDEN"],
@@ -33,7 +36,16 @@ const route = defineRoute(
 
     const live = await runGoLive();
     const closed = await runClose();
-    return { data: { went_live: live.went_live, gone: closed.gone, expired: closed.expired } };
+
+    // Reconcile currently-live drops (60s job): pull quantity_remaining down to
+    // match Redis. Never increases it, never writes back to Redis.
+    const { data: liveDrops } = await getServiceClient().from("drops").select("id").eq("status", "live");
+    let reconciled = 0;
+    for (const d of liveDrops ?? []) {
+      await reconcileDrop(d.id as string);
+      reconciled++;
+    }
+    return { data: { went_live: live.went_live, gone: closed.gone, expired: closed.expired, reconciled } };
   },
 );
 
