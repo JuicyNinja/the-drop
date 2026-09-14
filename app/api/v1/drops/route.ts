@@ -1,15 +1,16 @@
-import { z } from "@/lib/zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route";
+import { createDropSchema, dropResponseSchema } from "@/lib/api/drop-schemas";
+import { createDraft, scheduleDrop } from "@/lib/drops";
 import { orgIdForLocation, requireOwner } from "@/lib/auth/org-access";
 
 /**
- * Create a drop. WP-5 ships the role gate only: owner/admin may reach it, and
- * merchant_staff is rejected with 403 (staff sees Today's Code and nothing
- * else, PRD §3.2). The creation logic — draft/scheduled lifecycle, allowance
- * consumption, the 402 soft block — is WP-6, so an authorized caller gets
- * NOT_IMPLEMENTED (501) naming that package rather than a fake success. The
- * WP-6 gate asserts no NOT_IMPLEMENTED remains here.
+ * Create a Local drop. Begins from a location (the client flow enters from the
+ * business profile, never a bare form). Owner/admin only; staff is 403.
+ *
+ * A draft consumes no allowance. `publish: true` schedules immediately, which
+ * consumes allowance and can return 402 ALLOWANCE_EXHAUSTED (the soft block) —
+ * the draft is kept so the merchant can upgrade and publish it.
  */
 const route = defineRoute(
   {
@@ -17,22 +18,23 @@ const route = defineRoute(
     path: "/v1/drops",
     operationId: "createDrop",
     summary: "Create a drop",
-    description: "Role gate is live (WP-5); the creation flow is WP-6.",
+    description: "Local drop, created from a location. draft by default; publish:true schedules it.",
     tags: ["Drops"],
     auth: "user",
-    // WP-6 defines the full body; for the gate the location identifies the org.
-    request: { body: z.object({ location_id: z.uuid() }) },
-    response: { data: z.object({ id: z.string() }) },
-    errors: ["FORBIDDEN", "NOT_FOUND", "ALLOWANCE_EXHAUSTED", "NOT_IMPLEMENTED"],
+    request: { body: createDropSchema },
+    response: { status: 201, data: dropResponseSchema },
+    errors: ["FORBIDDEN", "NOT_FOUND", "ALLOWANCE_EXHAUSTED", "VALIDATION_ERROR"],
   },
   async ({ body, user }) => {
     if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
     await requireOwner(user, await orgIdForLocation(body.location_id));
-    throw new ApiError(
-      "NOT_IMPLEMENTED",
-      "Drop creation (lifecycle and allowance consumption) is not built yet.",
-      { pending_work_package: "WP-6" },
-    );
+
+    const draft = await createDraft(user.id, body);
+    if (body.publish) {
+      // Schedule now; a 402 here leaves the draft for upgrade-and-publish.
+      return { data: await scheduleDrop(draft.id) };
+    }
+    return { data: draft };
   },
 );
 

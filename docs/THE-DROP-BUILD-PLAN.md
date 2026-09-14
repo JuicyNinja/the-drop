@@ -236,6 +236,25 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Upgrade at cap unblocks creation inside the same request cycle
 - No restock path exists anywhere in the codebase
 
+**Decisions recorded 2026-09-13 (during WP-6 execution):**
+
+- **Lifecycle.** `POST /v1/drops` creates a Local draft from a location (owner/admin; staff 403); a draft consumes no allowance. `publish:true` (or `PATCH {status:"scheduled"}`) schedules it, which consumes allowance and can 402. Scheduling consumes FIRST (authoritative), so a capped org never gets a scheduled drop. Cancel is `PATCH {status:"draft"}` and never restores allowance. Once live, `PATCH` on a frozen field is DROP_IMMUTABLE (the DB trigger is the enforcer; the API maps P0001 → DROP_IMMUTABLE). The WP-5 `NOT_IMPLEMENTED` shell is gone from `POST /v1/drops`.
+- **Scheduler.** `runGoLive`/`runClose` in `lib/drops.ts`; go-live seeds Redis inventory (SET NX; WP-7 consumes it), close sets gone (sold out) or expired (window passed). Exposed via `POST /v1/admin/scheduler/tick` (admin) for testing/manual runs. **Production trigger is decided below (deployment prerequisite), not Vercel cron.** The job logic is concurrency-safe (see the release-gate line).
+- **Encore is the only add-supply path.** Available only from `gone`; sets the parent `encore_pending` and creates a new draft with `parent_drop_id` set. The parent's quantity is never touched (verified). No restock path exists (grep-verified). Duplicate clones any drop to a new draft (`duplicated_from_id`), consuming no allowance until scheduled.
+- **Prorated upgrade behind a Stripe interface.** `SubscriptionGateway` (`lib/billing/subscription.ts`) with a dev gateway; `STRIPE_SECRET_KEY` absent → dev. Two-layer production guard like the geocoder: env superRefine at boot + a runtime refusal in the factory. The upgrade is real, not a stub: it recomputes the org's stored limit columns from the TARGET tier's catalog, sets tier + subscription id, and unblocks scheduling in the same request. Idempotent via the catch contract's Idempotency-Key pattern (Redis claim + stored result) — a replay returns the same result and does not double-apply. Enterprise's arbitrary stored limits are untouched by the catalog (verified). **Downgrade is intentionally NOT built in WP-6** — a mid-cycle upgrade-then-downgrade is a real support case with no path yet; do not assume one exists.
+- **The gate is `npm run wp6:gate`** (`scripts/wp6-gate.ts`) against a running dev server.
+
+**Scheduler cadence — DECISION (deployment prerequisite for WP-13 / launch).**
+
+A drop scheduled for 12:00:00 must go live within a second or two, not up to ~47s late. Vercel cron's 1-minute floor is therefore unacceptable for go-live. Decision:
+
+- **Primary trigger: Upstash QStash per-drop scheduled messages.** At schedule time, enqueue one QStash message with an absolute `Upstash-Not-Before` = `live_at` that calls the go-live path, and one at `live_until` for close. QStash delivers at the target time to second-level accuracy — far better than any polling interval — and we already run Upstash, so no new vendor. QStash is at-least-once with retries, which is safe because the endpoint is idempotent (below).
+- **Reconciliation sweep: the existing `POST /v1/admin/scheduler/tick`** on a 1-minute Vercel cron (or Supabase `pg_cron` + `pg_net`) as a catch-all that transitions any drop QStash missed (delivery failure, backlog, a drop scheduled during an outage). It is a safety net, not the primary path; its 1-minute lateness only matters if QStash failed.
+- **Rejected:** Vercel cron alone (1-min floor breaks the promise); a dedicated always-on worker (a ~$5–7/mo process against the serverless model, and still polling); GitHub Actions cron (5-min floor).
+- **Cost:** QStash free tier is ~500 messages/day; each drop uses 2 messages (go-live + close), so launch volume (a handful of drops/day in SLC) is $0. Beyond the free tier it is ~$1 per 100K messages — trivial at any realistic v1 volume.
+
+Wire this in WP-13 (operator surfaces) or the deployment step; the job functions and the idempotent endpoint are already built in WP-6.
+
 ---
 
 ## WP-7 — The catch contract
@@ -453,6 +472,8 @@ All of the following, before launch:
 - [ ] No `NOT_IMPLEMENTED` (501) response remains anywhere in the codebase — **grep-verified**
 - [ ] `openapi.json` matches implementation
 - [ ] Lint boundary rules active and unsuppressed
+- [ ] Precise scheduler trigger wired (QStash per-drop go-live/close), not Vercel cron; the `/v1/admin/scheduler/tick` sweep is the reconciliation net only
+- [ ] Scheduler jobs are safe under concurrent execution — two tickers firing at once transition a drop exactly once and seed Redis inventory exactly once. Guaranteed by: the transition UPDATE is conditional on the current status and RETURNs the row, so exactly one ticker wins and only the winner proceeds; Redis seeding is SET NX (a duplicate seed is a no-op); allowance is consumed at *schedule*, never at go-live, so go-live cannot double-consume. Proven in `wp6:gate` with two concurrent ticks
 - [ ] One real merchant runs one real drop end to end in production
 
 ---
@@ -465,6 +486,8 @@ Admin approval queue. `submitted → approved | rejected` with reasons. Scheduli
 ## WP-16 — Payments
 Stripe Connect, maker onboarding and KYC, payouts, marketplace tax nexus, 1099-K. **Plan as its own project — this is the largest hidden scope item in the roadmap.**
 **No platform percentage of any transaction.** Revenue remains the flat subscription.
+
+**Subscription upgrade (from WP-6):** the WP-6 dev `SubscriptionGateway` must be replaced by a real Stripe implementation here. Proration MUST use `proration_behavior=always_invoice`, and the Stripe **webhook** is what confirms the charge — never the synchronous API response. The interface (`lib/billing/subscription.ts`) is unchanged; only the gateway impl and a webhook handler are added. Also add a downgrade path (deferred in WP-6): a merchant who upgrades mid-cycle currently has **no path back down** — a real support case (buyer's-remorse upgrade, seasonal downshift) that WP-6 cannot handle. Surface it here rather than discover it in support.
 
 ## WP-17 — Orders and invoicing
 Order table with date/product-ID sort and per-row action buttons. Auto-generated invoice, PDF export. **Tracking capture mandatory before `shipped`.**

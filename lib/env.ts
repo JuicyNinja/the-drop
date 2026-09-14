@@ -50,21 +50,34 @@ const envObject = z.object({
 
   // --- Geocoding (Google). Absent → dev geocoder (deterministic, no network). ---
   GOOGLE_GEOCODING_API_KEY: z.string().min(1).optional(),
+
+  // --- Billing (Stripe subscriptions). Absent → dev subscription gateway. ---
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
 });
 
 /**
- * Production guard: the dev geocoder returns plausible coordinates, so a
- * missing key in production would fail SILENTLY — every buyer geocoded into the
- * wrong market with no error anywhere. Require the real key in production, the
- * same as any other required var, so it fails loudly at boot instead.
+ * Production guard for dev-fallback providers.
+ *
+ * These providers have real dev implementations that succeed plausibly with no
+ * network call (the dev geocoder returns coordinates; the dev subscription
+ * gateway grants a tier upgrade). In production that is a SILENT failure — a
+ * buyer in the wrong market, a tier granted with no charge. So each key is
+ * required when APP_ENV=production and fails loudly at boot, exactly like any
+ * other required var. Each provider ALSO refuses its dev impl in production at
+ * the factory (defense in depth).
  */
+const PRODUCTION_REQUIRED = ["GOOGLE_GEOCODING_API_KEY", "STRIPE_SECRET_KEY"] as const;
+
 const envSchema = envObject.superRefine((val, ctx) => {
-  if (val.APP_ENV === "production" && !val.GOOGLE_GEOCODING_API_KEY) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["GOOGLE_GEOCODING_API_KEY"],
-      message: "is required when APP_ENV=production (the dev geocoder must never run in production)",
-    });
+  if (val.APP_ENV !== "production") return;
+  for (const key of PRODUCTION_REQUIRED) {
+    if (!val[key]) {
+      ctx.addIssue({
+        code: "custom",
+        path: [key],
+        message: `is required when APP_ENV=production (its dev fallback must never run in production)`,
+      });
+    }
   }
 });
 

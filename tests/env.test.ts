@@ -32,13 +32,18 @@ describe("lib/env", () => {
     ).toThrow("UPSTASH_REDIS_REST_TOKEN is required");
   });
 
-  it("requires GOOGLE_GEOCODING_API_KEY in production (dev geocoder must not ship)", () => {
-    expect(() => parseEnv({ ...VALID_ENV, APP_ENV: "production" })).toThrow(
-      /GOOGLE_GEOCODING_API_KEY is required/,
-    );
-    // Present in production → fine.
+  it("requires dev-fallback provider keys in production (they must not ship)", () => {
+    const prod = { ...VALID_ENV, APP_ENV: "production" as const };
+    // Both dev-fallback keys are required in production.
+    expect(() => parseEnv(prod)).toThrow(/GOOGLE_GEOCODING_API_KEY is required/);
+    expect(() => parseEnv(prod)).toThrow(/STRIPE_SECRET_KEY is required/);
+    // Missing just Stripe still fails on Stripe.
+    expect(() =>
+      parseEnv({ ...prod, GOOGLE_GEOCODING_API_KEY: "g" }),
+    ).toThrow(/STRIPE_SECRET_KEY is required/);
+    // Both present → fine.
     expect(
-      parseEnv({ ...VALID_ENV, APP_ENV: "production", GOOGLE_GEOCODING_API_KEY: "k" }).APP_ENV,
+      parseEnv({ ...prod, GOOGLE_GEOCODING_API_KEY: "g", STRIPE_SECRET_KEY: "s" }).APP_ENV,
     ).toBe("production");
     // Not required outside production.
     expect(parseEnv({ ...VALID_ENV, APP_ENV: "staging" }).APP_ENV).toBe("staging");

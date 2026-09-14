@@ -59,7 +59,7 @@ export function seedLimitsFor(tier: string): SeededLimits {
   return { max_locations: spec.max_locations, drops_per_cycle: spec.drops_per_cycle, pooled: spec.pooled };
 }
 
-function prorate(priceCents: number, cycleEndsAt: string): number {
+export function prorate(priceCents: number, cycleEndsAt: string): number {
   const msLeft = new Date(cycleEndsAt).getTime() - Date.now();
   const daysLeft = Math.max(0, Math.min(CYCLE_DAYS, msLeft / (1000 * 60 * 60 * 24)));
   return Math.round(priceCents * (daysLeft / CYCLE_DAYS));
