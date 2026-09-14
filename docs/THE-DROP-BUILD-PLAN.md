@@ -358,6 +358,67 @@ Wire this in WP-13 (operator surfaces) or the deployment step; the job functions
 - Position number travels; clout does not
 - Decline returns to the original holder, never to inventory
 
+**Decisions recorded 2026-09-14 (during WP-9 execution):**
+
+- **`handle-search` path conflict resolved (touches committed WP-3).** The
+  contract named `GET /v1/users/me/handle-search` twice — WP-3 built it as
+  registration availability (`?handle=` → `{available, reason}`); §7 defines it
+  as the transfer autocomplete (`?q=` → handle+display_name). The contract
+  canonically names the path autocomplete, so **availability moved** to the new
+  unauthenticated `GET /v1/auth/handle-available`, and `handle-search` became the
+  authenticated autocomplete. Availability now returns **`{available}` only** (no
+  reason — taken, reserved, confusable, and malformed all look identical, keeping
+  WP-3's rule that reserved handles never reveal themselves), judged on the same
+  confusable-normalized form, and is **hard rate-limited by IP** (20/min) because
+  it is unauthenticated. Contract §2 and §7 were amended to agree. The WP-3 gate
+  exercises availability through registration (not the endpoint), so it is
+  unaffected; re-run green.
+- **Enumeration control on the autocomplete is the rate limit, not obscurity.**
+  `handle-search` is authenticated, requires a 2-char minimum, returns only
+  handle + display name (never user number, city, phone, email), excludes the
+  caller, and is capped at 30/min per user server-side (a fresh request cannot
+  reset it). Bulk namespace sweeping trips the limit — the same "the rate limit
+  IS the fraud control" philosophy as the unverified-redemption cap.
+- **transfer_count increments on ACCEPT, not on send.** A declined/expired/voided
+  transfer never completed a hop, so it leaves the catch at `transfer_count = 0`
+  and the sender free to try again. One accepted hop sets it to 1, and a second
+  send is `TRANSFER_LIMIT_REACHED`. The one-hop limit is thus the *completed* hop.
+- **Mutual exclusion is a conditional status flip on the catch, both directions
+  (surgical WP-8 fix).** Send flips `held → transfer_pending` and redeem flips
+  `held → redeemed`, each `WHERE status='held'`, so the DB serializes them and
+  exactly one wins a given catch. Redeem previously updated the catch status
+  unconditionally *after* inserting the redemption; that left a race where a send
+  could interleave. Redeem now acquires the catch with the conditional flip
+  *before* writing the redemption (rolling back to `held` on a write failure).
+  The WP-8 gate was re-run green after the change.
+- **Sweeper: void before expire, both concurrency-safe.** Pass 1 voids pendings
+  whose catch window has closed (`catches.expires_at <= now`) → catch `expired`
+  (dies with the window, no orphan); pass 2 expires pendings past `accept_by`
+  with the window still open → catch back to `held` (to the sender). Void runs
+  first so a transfer past the window is never handed back as a live catch. Each
+  transition is a conditional `WHERE status='pending'` update, so two concurrent
+  sweeps resolve any transfer exactly once (proven: two parallel sweeps, one
+  winner). Under the 30-min send cutoff + 5-min accept window a pending never
+  legitimately outlives its redemption window, so the void pass is a safety net;
+  the gate constructs the guarded state directly to exercise it.
+- **No SMS on expire/void.** The contract lists transfer SMS on send, accept, and
+  decline only; an automatic expiry/void sends none. (Dev SMS is mirrored to a
+  short-lived Redis list `dev:sms:<phone>` so an out-of-process gate can prove a
+  send happened; the Twilio sender never writes it.)
+- **`GET /v1/catches` (the §5 wallet) built here.** Left unbuilt it would hand the
+  UI package an API gap — the Send tab needs held catches to send from. Scoped to
+  the CURRENT holder (`user_id`), so an accepted transfer appears in the
+  recipient's wallet and leaves the sender's; includes the drop's code (owner-only)
+  since it is also the buyer's redemption surface. `GET /v1/catches/{id}` (detail)
+  remains for a later WP. Proven in `wp9:gate` (held listing follows an accept).
+- **WP-3 gate repaired to 17/17 (stale-gate hygiene).** Two failures unrelated to
+  WP-3's logic: (1) its Redis client read `.env.local` (cloud) while the server
+  writes local SRH — fixed to prefer `.env.development.local`; (2) it asserted the
+  catch returns `NOT_IMPLEMENTED`, obsolete since WP-7 made catch Redis-authoritative
+  — now it seeds Redis like go-live and asserts the real `201` catch. A gate that
+  sits at 15/17 stops being read; fixed at the moment it was noticed rather than
+  deferred.
+
 ---
 
 ## WP-10 — Clout, badges, whispers

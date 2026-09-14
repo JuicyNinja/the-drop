@@ -141,6 +141,53 @@ export async function catchDrop(
 }
 
 /**
+ * The wallet (API-CONTRACT §5): the caller's catches, newest first, optionally
+ * filtered by status. Scoped to the CURRENT holder (`user_id`), so an accepted
+ * transfer appears in the recipient's wallet and leaves the sender's. Includes
+ * the drop's code — the buyer owns it and types it at redemption — but only for
+ * their own catches. The Send tab lists `status=held` to choose what to send.
+ */
+export interface WalletCatch {
+  id: string;
+  status: string;
+  position_number: number;
+  code: string;
+  transfer_count: number;
+  caught_at: string;
+  expires_at: string;
+  drop: { id: string; title: string };
+}
+
+export type CatchStatusFilter = "held" | "transfer_pending" | "redeemed" | "expired";
+
+export async function listCatches(
+  userId: string,
+  status?: CatchStatusFilter,
+): Promise<WalletCatch[]> {
+  let query = getServiceClient()
+    .from("catches")
+    .select("id, status, position_number, code, transfer_count, caught_at, expires_at, drops!inner(id, title)")
+    .eq("user_id", userId)
+    .order("caught_at", { ascending: false });
+  if (status) query = query.eq("status", status);
+  const { data, error } = await query;
+  if (error) throw new Error(`list catches failed: ${error.message}`);
+  return (data ?? []).map((r) => {
+    const drop = r.drops as unknown as { id: string; title: string };
+    return {
+      id: r.id as string,
+      status: r.status as string,
+      position_number: r.position_number as number,
+      code: r.code as string,
+      transfer_count: r.transfer_count as number,
+      caught_at: r.caught_at as string,
+      expires_at: r.expires_at as string,
+      drop: { id: drop.id, title: drop.title },
+    };
+  });
+}
+
+/**
  * Reconciliation (60s job). Compares quantity_total - count(catches) against
  * Redis inventory, logs drift, and writes quantity_remaining to Postgres for
  * the board. NEVER increases quantity_remaining, NEVER writes back to Redis.

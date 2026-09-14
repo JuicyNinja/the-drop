@@ -1,4 +1,5 @@
 import { getEnv } from "@/lib/env";
+import { recordDevSms } from "@/lib/redis";
 
 /**
  * SMS delivery behind a provider interface. WP-3 ships a dev sender that logs
@@ -19,6 +20,8 @@ export class DevSmsSender implements SmsSender {
   async send(to: string, body: string): Promise<{ id: string }> {
     DevSmsSender.sent.push({ to, body, at: new Date().toISOString() });
     console.log(`[dev-sms] to=${to} body=${JSON.stringify(body)}`);
+    // Cross-process observability for gates (dev only; never in production).
+    await recordDevSms(to, body);
     return { id: `dev-${DevSmsSender.sent.length}` };
   }
 }

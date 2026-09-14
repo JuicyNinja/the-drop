@@ -1,7 +1,7 @@
 import { z } from "@/lib/zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route";
-import { catchDrop } from "@/lib/catches";
+import { catchDrop, listCatches } from "@/lib/catches";
 
 /**
  * API-CONTRACT §5: the catch. The single most important endpoint in the system.
@@ -63,3 +63,43 @@ const route = defineRoute(
 );
 
 export const POST = route.handler;
+
+/**
+ * API-CONTRACT §5: the wallet. The caller's catches (as current holder), newest
+ * first, optionally filtered by status. The Send tab reads `?status=held`.
+ */
+const listRoute = defineRoute(
+  {
+    method: "get",
+    path: "/v1/catches",
+    operationId: "listCatches",
+    summary: "The wallet — the caller's catches",
+    tags: ["Catches"],
+    auth: "user",
+    request: {
+      query: z.object({
+        status: z.enum(["held", "transfer_pending", "redeemed", "expired"]).optional(),
+      }),
+    },
+    response: {
+      data: z.array(
+        z.object({
+          id: z.string(),
+          status: z.string(),
+          position_number: z.number(),
+          code: z.string(),
+          transfer_count: z.number(),
+          caught_at: z.string(),
+          expires_at: z.string(),
+          drop: z.object({ id: z.string(), title: z.string() }),
+        }),
+      ),
+    },
+  },
+  async ({ query, user }) => {
+    if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
+    return { data: await listCatches(user.id, query.status) };
+  },
+);
+
+export const GET = listRoute.handler;

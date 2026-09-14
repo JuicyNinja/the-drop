@@ -182,6 +182,32 @@ export async function redeem(
   }
 
   const now = new Date();
+
+  // Acquire the catch as the mutual-exclusion lock (WP-9): flip held → redeemed
+  // conditionally. This serializes against a concurrent transfer send, which
+  // flips held → transfer_pending under the same WHERE status='held' guard, so
+  // exactly one of {redeem, send} wins a given catch. A redemption can never
+  // proceed on a catch with a transfer pending, and a send can never proceed on
+  // a catch mid-redemption. (Requirement: transfer and redemption are mutually
+  // exclusive, both directions.) The load-time status check above is the fast
+  // path; this is the authoritative lock against the race.
+  const { data: acquired, error: aErr } = await svc
+    .from("catches")
+    .update({ status: "redeemed" })
+    .eq("id", input.catch_id)
+    .eq("status", "held")
+    .select("id");
+  if (aErr) throw new Error(`acquire catch failed: ${aErr.message}`);
+  if (!acquired || acquired.length === 0) {
+    // Lost the race: the catch was moved (redeemed already, or transfer_pending)
+    // between the load and here. Re-read to report precisely without leaking.
+    const { data: fresh } = await svc.from("catches").select("status").eq("id", input.catch_id).maybeSingle();
+    if ((fresh?.status as string | undefined) === "redeemed") {
+      return fail("ALREADY_REDEEMED", "This catch has already been redeemed.");
+    }
+    return fail("INVALID_CODE", "That code is not valid.");
+  }
+
   const flagged = await velocityFlag(userId, { lat: loc.lat as number, lng: loc.lng as number }, now);
 
   const redemptionId = randomUUID();
@@ -200,11 +226,14 @@ export async function redeem(
     redeemed_at: now.toISOString(),
   });
   if (rErr) {
+    // Backstop for the unique(catch_id) index; unreachable in the normal flow
+    // now that the conditional flip above already claimed the catch.
     if (rErr.code === "23505") return fail("ALREADY_REDEEMED", "This catch has already been redeemed.");
+    // Genuine write failure after we flipped the catch: roll it back to held so
+    // it is not stranded as redeemed with no redemption row.
+    await svc.from("catches").update({ status: "held" }).eq("id", input.catch_id).eq("status", "redeemed");
     throw new Error(`redemption insert failed: ${rErr.message}`);
   }
-
-  await svc.from("catches").update({ status: "redeemed" }).eq("id", input.catch_id);
 
   // Clout: the redemption source event. City from the merchant location.
   const cloutEarned = await recordRedemptionClout(userId, (loc.city_id as string | null) ?? null, redemptionId);

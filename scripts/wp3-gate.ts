@@ -17,14 +17,20 @@ const BASE = process.env.APP_URL ?? "http://127.0.0.1:3000";
 const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
 function loadEnvLocal(): Record<string, string> {
+  // Same precedence Next.js uses in dev: .env.development.local (the local stack
+  // — SRH at :8079) outranks .env.local (cloud). The gate's Redis client must
+  // talk to the SAME Redis the dev server does, or the phone-verify code it
+  // reads back was never written where it is looking.
   const out: Record<string, string> = {};
-  try {
-    for (const line of readFileSync(".env.local", "utf8").split("\n")) {
-      const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-      if (m) out[m[1]] = m[2];
+  for (const file of [".env.local", ".env.development.local"]) {
+    try {
+      for (const line of readFileSync(file, "utf8").split("\n")) {
+        const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+        if (m) out[m[1]] = m[2].trim();
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
   }
   return out;
 }
@@ -156,6 +162,13 @@ async function main(): Promise<void> {
   ).rows[0].id as string;
   await pg.query(`update drops set status = 'scheduled' where id = $1`, [drop]);
   await pg.query(`update drops set status = 'live' where id = $1`, [drop]);
+  // Since WP-7 the catch path is Redis-authoritative: go-live seeds inventory +
+  // meta and the catch reads them, never Postgres. This gate forces the drop live
+  // via SQL (not the scheduler), so it seeds Redis the same way go-live does —
+  // otherwise the catch below is DROP_NOT_LIVE. Key shapes mirror lib/redis.ts.
+  const redeemUntilIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  await redis.set(`drop:${drop}:inventory`, 10);
+  await redis.set(`drop:${drop}:meta`, { qt: 10, lu: null, ru: redeemUntilIso, title: "Gate Drop", code: "GATE1" });
 
   const stamp = Date.now();
   const emailA = `gate_${stamp}_a@example.test`;
@@ -217,11 +230,11 @@ async function main(): Promise<void> {
     body: { drop_id: drop },
   });
   check(
-    "1. after SMS + location, the drop is unlocked (catch clears every gate to the WP-7 boundary)",
+    "1. after SMS + location, the drop is unlocked (catch clears every gate and the atomic catch succeeds)",
     grant.status === 200 &&
-      catchAfter.status === 501 &&
-      catchAfter.body.error?.code === "NOT_IMPLEMENTED",
-    `grant ${grant.status}; catch ${catchAfter.status} ${JSON.stringify(catchAfter.body.error ?? catchAfter.body)}`,
+      catchAfter.status === 201 &&
+      typeof catchAfter.body.data?.position_number === "number",
+    `grant ${grant.status}; catch ${catchAfter.status} pos=${catchAfter.body.data?.position_number ?? JSON.stringify(catchAfter.body.error ?? catchAfter.body)}`,
   );
 
   // ========================================================================

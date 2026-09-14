@@ -393,6 +393,64 @@
           "meta"
         ]
       },
+      "adminTransferSweepResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "voided": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "expired": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "voided",
+              "expired"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "authHandleAvailableResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "available"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
       "authOauthCallbackResponse": {
         "type": "object",
         "properties": {
@@ -691,6 +749,73 @@
               "expires_at",
               "drop"
             ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "listCatchesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "position_number": {
+                  "type": "number"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "transfer_count": {
+                  "type": "number"
+                },
+                "caught_at": {
+                  "type": "string"
+                },
+                "expires_at": {
+                  "type": "string"
+                },
+                "drop": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "position_number",
+                "code",
+                "transfer_count",
+                "caught_at",
+                "expires_at",
+                "drop"
+              ]
+            }
           },
           "meta": {
             "type": "object",
@@ -1877,6 +2002,153 @@
           "meta"
         ]
       },
+      "acceptTransferResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "transfer_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "catch_id": {
+                "type": "string"
+              },
+              "position_number": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "transfer_id",
+              "status",
+              "catch_id",
+              "position_number"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "declineTransferResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "transfer_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "transfer_id",
+              "status"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "listIncomingTransfersResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "from_handle": {
+                  "type": "string"
+                },
+                "position_number": {
+                  "type": "number"
+                },
+                "drop_title": {
+                  "type": "string"
+                },
+                "accept_by": {
+                  "type": "string"
+                },
+                "sent_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "from_handle",
+                "position_number",
+                "drop_title",
+                "accept_by",
+                "sent_at"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "createTransferResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "transfer_id": {
+                "type": "string"
+              },
+              "to_handle": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "accept_by": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "transfer_id",
+              "to_handle",
+              "status",
+              "accept_by"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
       "setActiveAddressResponse": {
         "type": "object",
         "properties": {
@@ -1966,22 +2238,22 @@
         "type": "object",
         "properties": {
           "data": {
-            "type": "object",
-            "properties": {
-              "available": {
-                "type": "boolean"
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "handle": {
+                  "type": "string"
+                },
+                "display_name": {
+                  "type": "string"
+                }
               },
-              "reason": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            },
-            "required": [
-              "available",
-              "reason"
-            ]
+              "required": [
+                "handle",
+                "display_name"
+              ]
+            }
           },
           "meta": {
             "type": "object",
@@ -2929,6 +3201,192 @@
         }
       }
     },
+    "/v1/admin/transfers/sweep": {
+      "post": {
+        "operationId": "adminTransferSweep",
+        "summary": "Run one transfer sweeper pass",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/adminTransferSweepResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED | FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/handle-available": {
+      "get": {
+        "operationId": "authHandleAvailable",
+        "summary": "Check handle availability (registration)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "required": true,
+            "name": "handle",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/authHandleAvailableResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error. code: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/oauth/callback": {
       "post": {
         "operationId": "authOauthCallback",
@@ -3678,6 +4136,113 @@
           },
           "409": {
             "description": "Error. code: ALREADY_CAUGHT | DROP_GONE | DROP_NOT_LIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listCatches",
+        "summary": "The wallet — the caller's catches",
+        "tags": [
+          "Catches"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "held",
+                "transfer_pending",
+                "redeemed",
+                "expired"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/listCatchesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
             "content": {
               "application/json": {
                 "schema": {
@@ -6218,6 +6783,489 @@
         }
       }
     },
+    "/v1/transfers": {
+      "post": {
+        "operationId": "createTransfer",
+        "summary": "Send a catch to another buyer",
+        "tags": [
+          "Transfers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "catch_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "to_handle": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "catch_id",
+                  "to_handle"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/createTransferResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error. code: TRANSFER_CUTOFF_PASSED | TRANSFER_LIMIT_REACHED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transfers/incoming": {
+      "get": {
+        "operationId": "listIncomingTransfers",
+        "summary": "Pending transfers addressed to the caller",
+        "tags": [
+          "Transfers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/listIncomingTransfersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transfers/{id}/accept": {
+      "post": {
+        "operationId": "acceptTransfer",
+        "summary": "Accept an incoming transfer",
+        "tags": [
+          "Transfers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/acceptTransferResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error. code: TRANSFER_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transfers/{id}/decline": {
+      "post": {
+        "operationId": "declineTransfer",
+        "summary": "Decline an incoming transfer",
+        "tags": [
+          "Transfers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/declineTransferResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error. code: TRANSFER_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/users/me": {
       "get": {
         "operationId": "usersGetMe",
@@ -6555,9 +7603,9 @@
     "/v1/users/me/handle-search": {
       "get": {
         "operationId": "usersHandleSearch",
-        "summary": "Check handle availability",
+        "summary": "Autocomplete handles for the send flow",
         "tags": [
-          "Users"
+          "Transfers"
         ],
         "security": [
           {
@@ -6568,11 +7616,11 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1,
+              "minLength": 2,
               "maxLength": 40
             },
             "required": true,
-            "name": "handle",
+            "name": "q",
             "in": "query"
           },
           {

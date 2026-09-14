@@ -1,51 +1,45 @@
 import { z } from "@/lib/zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route";
-import { validateHandle } from "@/lib/handles";
-import { assertHandleAvailable } from "@/lib/auth/registration";
 import { incrementWithWindow } from "@/lib/redis";
-import { isApiError } from "@/lib/api/errors";
+import { searchHandles } from "@/lib/users";
 
 /**
- * Handle availability for the registration UI. Rate limited 60/min per user
- * (API-CONTRACT §13). Reserved and taken handles both report unavailable
- * without revealing which are reserved.
+ * Handle autocomplete for the transfer send flow (API-CONTRACT §7).
+ *
+ * This is a user-enumeration surface. Three controls, together, make it useless
+ * for testing whether a given handle exists at volume:
+ *   1. A minimum query length of 2 (no single-character probing).
+ *   2. A hard per-user rate limit (30 / rolling minute), enforced server-side in
+ *      Redis so a fresh request cannot reset it. Bulk sweeping trips it.
+ *   3. The response carries ONLY handle and display name — never the user
+ *      number, city, phone, or email.
+ * The caller is excluded from results (you cannot send a catch to yourself).
+ *
+ * (Registration availability — the old purpose of this path — moved to the
+ * unauthenticated GET /v1/auth/handle-available.)
  */
+const SEARCH_LIMIT_PER_MIN = 30;
+
 const route = defineRoute(
   {
     method: "get",
     path: "/v1/users/me/handle-search",
     operationId: "usersHandleSearch",
-    summary: "Check handle availability",
-    tags: ["Users"],
+    summary: "Autocomplete handles for the send flow",
+    tags: ["Transfers"],
     auth: "user",
-    request: { query: z.object({ handle: z.string().min(1).max(40) }) },
+    request: { query: z.object({ q: z.string().min(2).max(40) }) },
     response: {
-      data: z.object({
-        available: z.boolean(),
-        reason: z.string().nullable(),
-      }),
+      data: z.array(z.object({ handle: z.string(), display_name: z.string() })),
     },
     errors: ["RATE_LIMITED"],
   },
   async ({ query, user }) => {
     if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
     const hits = await incrementWithWindow(`handlesearch:${user.id}`, 60);
-    if (hits > 60) throw new ApiError("RATE_LIMITED", "Slow down.");
-
-    const validated = validateHandle(query.handle);
-    if (!validated.ok) {
-      return { data: { available: false, reason: validated.problem.rule } };
-    }
-    try {
-      await assertHandleAvailable(validated.handle);
-      return { data: { available: true, reason: null } };
-    } catch (error) {
-      if (isApiError(error) && error.code === "HANDLE_TAKEN") {
-        return { data: { available: false, reason: "taken" } };
-      }
-      throw error;
-    }
+    if (hits > SEARCH_LIMIT_PER_MIN) throw new ApiError("RATE_LIMITED", "Slow down.");
+    return { data: await searchHandles(query.q, user.id) };
   },
 );
 

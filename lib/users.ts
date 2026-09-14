@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/server";
+import { normalizeHandle } from "@/lib/handles";
 
 /**
  * The application user row (public.users), distinct from the Supabase Auth
@@ -41,6 +42,61 @@ export async function getUserById(id: string): Promise<UserRecord | null> {
     .maybeSingle();
   if (error) throw new Error(`load user failed: ${error.message}`);
   return data ? normalizeUserRow(data) : null;
+}
+
+/**
+ * Resolve a user by the confusable-collapsed form of a handle (the same
+ * uniqueness key registration enforces), so a transfer to `t_a_d` reaches the
+ * account registered as `tad`. Returns null when no live account matches. Only
+ * the fields a transfer needs; never the auth uid or address graph.
+ */
+export async function getUserByHandle(
+  handle: string,
+): Promise<{ id: string; handle: string; full_name: string; phone: string } | null> {
+  const { data, error } = await getServiceClient()
+    .from("users")
+    .select("id, handle, full_name, phone")
+    .eq("handle_normalized", normalizeHandle(handle))
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`handle lookup failed: ${error.message}`);
+  return data
+    ? {
+        id: data.id as string,
+        handle: data.handle as string,
+        full_name: data.full_name as string,
+        phone: data.phone as string,
+      }
+    : null;
+}
+
+/**
+ * Prefix autocomplete over handles for the transfer send flow (API-CONTRACT §7).
+ * Returns ONLY the public leaf of the user graph — handle and display name —
+ * never the user number, city, phone, or email. The caller is excluded (you
+ * cannot send a catch to yourself). This is a user-enumeration surface; the
+ * route in front of it enforces a minimum query length and a hard per-user rate
+ * limit, which together are what stop namespace sweeping at volume. Prefix match
+ * on the raw handle (not the normalized form) so the results read naturally.
+ */
+export async function searchHandles(
+  q: string,
+  excludeUserId: string,
+  limit = 10,
+): Promise<{ handle: string; display_name: string }[]> {
+  // Escape PostgREST/ILIKE metacharacters so a query cannot widen the match.
+  const prefix = q.toLowerCase().replace(/[%_\\,()]/g, "");
+  if (prefix.length === 0) return [];
+  const { data, error } = await getServiceClient()
+    .from("users")
+    .select("handle, full_name")
+    .ilike("handle", `${prefix}%`)
+    .is("deleted_at", null)
+    .neq("id", excludeUserId)
+    .order("handle", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(`handle search failed: ${error.message}`);
+  return (data ?? []).map((r) => ({ handle: r.handle as string, display_name: r.full_name as string }));
 }
 
 /**

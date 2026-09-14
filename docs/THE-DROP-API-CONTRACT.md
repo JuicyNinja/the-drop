@@ -228,11 +228,21 @@ email, not a signup blocker.
 
 Errors: `HANDLE_TAKEN`, `VALIDATION_ERROR`.
 
-### `GET /v1/users/me/handle-search?handle=`
-Availability check for the registration UI. Rate limited 60/min per user.
+### `GET /v1/auth/handle-available?handle=`
+Availability check for the registration UI. **Unauthenticated** — it runs before
+a session exists — so it is an open enumeration surface and is **rate limited
+hard by client IP** (20/min). It returns **only** `{ available }`: taken,
+reserved, confusable, and malformed handles are all reported `available: false`
+with no reason, so the namespace never reveals which names are special.
+Availability is judged on the confusable-normalized form, so a handle reported
+available here is not then rejected at submit for colliding with an existing one.
 ```json
-{ "data": { "available": false, "reason": "taken" } }
+{ "data": { "available": false } }
 ```
+Errors: `RATE_LIMITED`.
+
+> The authenticated handle **autocomplete** for the transfer send flow is a
+> different endpoint — `GET /v1/users/me/handle-search?q=` (§7).
 
 ### `POST /v1/auth/phone/verify/send`
 ### `POST /v1/auth/phone/verify/confirm`
@@ -425,7 +435,22 @@ Errors: `DROP_GONE`, `DROP_NOT_LIVE`, `ALREADY_CAUGHT`, `LOCATION_PERMISSION_REQ
 
 ### `GET /v1/catches` — the wallet
 ```
-?status=held|transfer_pending|redeemed|expired
+?status=held|transfer_pending|redeemed|expired   (optional)
+```
+The caller's catches as **current holder** (an accepted transfer appears in the
+recipient's wallet and leaves the sender's), newest first. Includes the drop's
+code — the buyer owns it and types it at redemption. The Send tab reads
+`?status=held`.
+```json
+{
+  "data": [
+    {
+      "id": "uuid", "status": "held", "position_number": 12, "code": "K7MX",
+      "transfer_count": 0, "caught_at": "...", "expires_at": "...",
+      "drop": { "id": "uuid", "title": "..." }
+    }
+  ]
+}
 ```
 
 ### `GET /v1/catches/{id}`
@@ -507,9 +532,29 @@ Errors: `TRANSFER_EXPIRED`
 Returns to the original holder immediately. **Never to the inventory pool.**
 
 ### `GET /v1/users/me/handle-search?q=`
-Autocomplete for the send flow. Returns handle and display name only. Rate-limited — this is a user-enumeration surface.
+Autocomplete for the send flow. **Authenticated.** Returns handle and display
+name only — never the user number, city, phone, or email; the caller is excluded.
+This is a user-enumeration surface, so three controls together make it useless
+for testing whether a handle exists at volume: a **minimum query length of 2**, a
+**hard per-user rate limit** (30/min, server-side so a fresh request cannot reset
+it), and the handle+display-name-only projection.
+```json
+{ "data": [ { "handle": "tad", "display_name": "T. Ad" } ] }
+```
+Errors: `RATE_LIMITED`, `VALIDATION_ERROR`.
 
-**Server-side sweeper**, every 30 seconds: expires `pending` past `accept_by`; voids `pending` past `redeem_until`. **Transfers MUST NOT rely on client-side timers.**
+**Server-side sweeper**, every 30 seconds: voids `pending` past `redeem_until`
+(the catch dies with its window — no orphan), then expires `pending` past
+`accept_by` (the catch returns to the sender). **Transfers MUST NOT rely on
+client-side timers.** Every transition is a conditional status update, so
+concurrent sweeps never double-resolve a transfer.
+
+### `POST /v1/admin/transfers/sweep`
+Runs one sweeper pass. Admin only; the production trigger is an Upstash/QStash
+schedule (~30s), the same deployment prerequisite as the drop scheduler tick.
+```json
+{ "data": { "voided": ["uuid"], "expired": ["uuid"] } }
+```
 
 ---
 

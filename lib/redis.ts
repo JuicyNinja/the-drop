@@ -155,6 +155,27 @@ export async function getIdempotencyResult<T>(
   return value;
 }
 
+/**
+ * Dev-only SMS observability. The dev SMS sender records every message it
+ * "sends" into a short-lived, capped Redis list keyed by recipient, so an
+ * out-of-process gate (which cannot see the server's memory) can prove that a
+ * transfer SMS was sent regardless of the recipient's notification prefs. The
+ * production (Twilio) sender never calls this. Best-effort: a Redis hiccup must
+ * never break an actual send.
+ */
+export const devSmsKey = (to: string): string => `dev:sms:${to}`;
+
+export async function recordDevSms(to: string, body: string): Promise<void> {
+  try {
+    const key = devSmsKey(to);
+    await redis().lpush(key, JSON.stringify({ to, body, at: new Date().toISOString() }));
+    await redis().ltrim(key, 0, 49);
+    await redis().expire(key, 3600);
+  } catch {
+    /* observability only; never fail a send on it */
+  }
+}
+
 /** Readiness probe. Throws if Redis does not answer PING. */
 export async function pingRedis(): Promise<void> {
   const reply = await redis().ping();
