@@ -24,15 +24,9 @@ import { getServiceClient } from "@/lib/supabase/server";
  *    failed write BURNS the position number; the gap is correct and the number
  *    is never reused (DECR only ever decreases).
  *  - Position = quantity_total - post_decrement_value. First catch → 1.
+ *  - The code is the DROP's code (one per drop, PRD §7.3), carried onto the
+ *    catch from Redis meta — not minted per catch.
  */
-
-/** 4-character code from the 24-symbol alphabet (no confusable glyphs). */
-const CODE_ALPHABET = "ACDEFGHJKMNPQRTUVWXY345679";
-export function mintCode(): string {
-  let s = "";
-  for (let i = 0; i < 4; i++) s += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  return s;
-}
 
 const IDEMPOTENCY_POLL_MS = 50;
 const IDEMPOTENCY_POLL_TRIES = 100; // ~5s for a concurrent in-flight original
@@ -102,9 +96,10 @@ export async function catchDrop(
     throw new ApiError("DROP_GONE", failure.message);
   }
 
-  // 5. Position, code, and the follow-up Postgres write.
+  // 5. Position, code, and the follow-up Postgres write. The code is the
+  //    drop's code (same for every catcher), carried from meta.
   const position = meta.qt - remaining;
-  const code = mintCode();
+  const code = meta.code;
   const catchId = randomUUID();
   const expiresAt = meta.ru ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 

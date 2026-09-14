@@ -72,3 +72,25 @@ export async function orgIdForLocation(locationId: string): Promise<string> {
   if (!data) throw new ApiError("NOT_FOUND", "No such location.");
   return data.org_id as string;
 }
+
+/**
+ * Access to a single location's merchant surfaces (Today's Code, code sheet).
+ * Allowed for an admin, the owner of the location's org, or a staff member
+ * scoped to THIS location. Today's Code is the only merchant surface staff may
+ * reach (PRD §3.2, §10).
+ */
+export async function requireLocationAccess(user: UserRecord, locationId: string): Promise<void> {
+  const orgId = await orgIdForLocation(locationId);
+  const svc = getServiceClient();
+  const { data, error } = await svc
+    .from("user_roles")
+    .select("role, org_id, location_id")
+    .eq("user_id", user.id);
+  if (error) throw new Error(`load roles failed: ${error.message}`);
+  const roles = data ?? [];
+  const ok =
+    roles.some((r) => r.role === "admin") ||
+    roles.some((r) => r.role === "merchant_owner" && r.org_id === orgId) ||
+    roles.some((r) => r.role === "merchant_staff" && r.org_id === orgId && r.location_id === locationId);
+  if (!ok) throw new ApiError("FORBIDDEN", "You do not have access to this location.");
+}

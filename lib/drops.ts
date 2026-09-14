@@ -2,6 +2,7 @@ import { ApiError } from "@/lib/api/errors";
 import { sanitizeText } from "@/lib/sanitize";
 import { getServiceClient } from "@/lib/supabase/server";
 import { seedDropMeta, seedInventory } from "@/lib/redis";
+import { mintCode } from "@/lib/codes";
 import { consumeDropAllowance, currentCycle, type OrgLimits } from "@/lib/billing/allowance";
 import { upgradeOptions } from "@/lib/billing/tiers";
 import { getOrg } from "@/lib/orgs";
@@ -292,25 +293,32 @@ export async function runGoLive(now: Date = new Date()): Promise<{ went_live: st
   const wentLive: string[] = [];
   for (const d of data ?? []) {
     const id = d.id as string;
-    // Concurrency-safe transition: the UPDATE is conditional on the row still
-    // being 'scheduled' and RETURNS the row. Under two simultaneous tickers,
-    // exactly one wins (returns a row); the loser matches 0 rows and skips.
-    // So a drop is transitioned once and only the winner proceeds to seed.
-    const { data: won, error: uErr } = await svc
-      .from("drops")
-      .update({ status: "live", updated_at: now.toISOString() })
-      .eq("id", id)
-      .eq("status", "scheduled")
-      .select("id");
-    if (uErr) {
-      console.error(`[go-live] ${id} failed`, uErr.message);
-      continue;
+    // Concurrency-safe transition, and the code is generated HERE (go-live),
+    // not at create, so a code never sits on a scheduled drop before it opens.
+    // The UPDATE is conditional on the row still being 'scheduled' and RETURNS
+    // the row: under two simultaneous tickers exactly one wins. The code must
+    // be unique across concurrently-live drops at the location (partial unique
+    // index drops_live_code_per_location); on the rare collision we regenerate.
+    let won: { id: string }[] | null = null;
+    let liveCode = "";
+    for (let attempt = 0; attempt < 6 && !won; attempt++) {
+      liveCode = mintCode();
+      const { data: rows, error: uErr } = await svc
+        .from("drops")
+        .update({ status: "live", code: liveCode, updated_at: now.toISOString() })
+        .eq("id", id)
+        .eq("status", "scheduled")
+        .select("id");
+      if (uErr) {
+        if (uErr.code === "23505") continue; // code collided with a live drop; retry
+        console.error(`[go-live] ${id} failed`, uErr.message);
+        break;
+      }
+      won = (rows as { id: string }[]) ?? null;
     }
-    if (!won || won.length === 0) continue; // lost the race; another ticker has it
-    // Seed Redis inventory + meta for the live window (the catch contract
-    // consumes both). SET NX on inventory is a second guard: even a duplicate
-    // reaches here only via the winning update, and NX makes re-seeding a
-    // no-op regardless. Meta lets the catch hot path decide Gone with zero DB.
+    if (!won || won.length === 0) continue; // lost the race or exhausted retries
+    // Seed Redis inventory + meta (the catch contract consumes both). SET NX on
+    // inventory is a second guard. Meta carries the code so a catch inherits it.
     const qt = d.quantity_total as number;
     const liveUntil = d.live_until as string | null;
     await seedInventory(id, qt);
@@ -319,6 +327,7 @@ export async function runGoLive(now: Date = new Date()): Promise<{ went_live: st
       lu: liveUntil ? new Date(liveUntil).getTime() : null,
       ru: (d.redeem_until as string | null) ?? null,
       title: d.title as string,
+      code: liveCode,
     });
     wentLive.push(id);
   }

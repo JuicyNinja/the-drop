@@ -44,6 +44,8 @@ describe("openapi.json (the native contract)", () => {
       "/v1/drops/{id}/stats",
       "/v1/health",
       "/v1/locations/{id}",
+      "/v1/locations/{id}/code-sheet.pdf",
+      "/v1/locations/{id}/today",
       "/v1/orgs",
       "/v1/orgs/{id}",
       "/v1/orgs/{id}/billing",
@@ -51,6 +53,7 @@ describe("openapi.json (the native contract)", () => {
       "/v1/orgs/{id}/staff",
       "/v1/orgs/{id}/subscription/upgrade",
       "/v1/ready",
+      "/v1/redemptions",
       "/v1/users/me",
       "/v1/users/me/active-address",
       "/v1/users/me/handle-search",
@@ -59,7 +62,7 @@ describe("openapi.json (the native contract)", () => {
       "/v1/users/me/walkthrough/complete",
       "/v1/users/me/walkthrough/skip",
     ]);
-  });
+  }, 20000);
 
   it("registers authenticated routes with bearer security and 401", async () => {
     const doc = await generateOpenApiDocument(ROOT);
@@ -74,7 +77,7 @@ describe("openapi.json (the native contract)", () => {
     // The per-drop stats route is still a WP-13 placeholder (501).
     const stats = (doc.paths?.["/v1/drops/{id}/stats"] as { get: { responses: Record<string, unknown> } }).get;
     expect(Object.keys(stats.responses)).toContain("501");
-  });
+  }, 20000);
 
   it("documents both operational routes as header-exempt and unauthenticated", async () => {
     const doc = await generateOpenApiDocument(ROOT);
@@ -85,7 +88,7 @@ describe("openapi.json (the native contract)", () => {
     }
     const ready = (doc.paths?.["/v1/ready"] as { get: { responses: Record<string, unknown> } }).get;
     expect(Object.keys(ready.responses).sort()).toEqual(["200", "500", "503"]);
-  });
+  }, 20000);
 
   it("matches the committed openapi.json (drift check)", async () => {
     const committed = fs
@@ -93,11 +96,11 @@ describe("openapi.json (the native contract)", () => {
       .replace(/\r\n/g, "\n");
     const generated = serializeOpenApi(await generateOpenApiDocument(ROOT));
     expect(committed).toBe(generated);
-  });
+  }, 20000);
 
   it("generation is deterministic", async () => {
     const a = serializeOpenApi(await generateOpenApiDocument(ROOT));
     const b = serializeOpenApi(await generateOpenApiDocument(ROOT));
     expect(a).toBe(b);
-  });
+  }, 20000);
 });

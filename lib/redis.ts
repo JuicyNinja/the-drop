@@ -98,6 +98,7 @@ export interface DropMeta {
   lu: number | null; // live_until epoch millis (catch window close)
   ru: string | null; // redeem_until ISO (catch expires_at)
   title: string;
+  code: string; // the drop's redemption code (one per drop, PRD §7.3)
 }
 
 const metaKey = (dropId: string) => `drop:${dropId}:meta`;

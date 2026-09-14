@@ -1263,6 +1263,91 @@
           "meta"
         ]
       },
+      "getLocationTodayResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "codes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "drop_id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "phonetic": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "redeem_until": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "drop_id",
+                    "code",
+                    "phonetic",
+                    "title",
+                    "redeem_until"
+                  ]
+                }
+              },
+              "feed": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "handle": {
+                      "type": "string"
+                    },
+                    "position_number": {
+                      "type": "number"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "unverified": {
+                      "type": "boolean"
+                    },
+                    "at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "handle",
+                    "position_number",
+                    "method",
+                    "unverified",
+                    "at"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "codes",
+              "feed"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
       "getOrgBillingResponse": {
         "type": "object",
         "properties": {
@@ -1748,6 +1833,48 @@
         "required": [
           "status",
           "checks"
+        ]
+      },
+      "createRedemptionResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "redemption_id": {
+                "type": "string"
+              },
+              "redeemed": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              },
+              "clout_earned": {
+                "type": "number"
+              },
+              "whisper_prompt": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "required": [
+              "redemption_id",
+              "redeemed",
+              "clout_earned",
+              "whisper_prompt"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "setActiveAddressResponse": {
@@ -4587,6 +4714,347 @@
         }
       }
     },
+    "/v1/locations/{id}/code-sheet.pdf": {
+      "get": {
+        "operationId": "getLocationCodeSheet",
+        "summary": "Printable code sheet (PDF)",
+        "tags": [
+          "Merchant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The code sheet PDF.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "LOCATION_PERMISSION_REQUIRED",
+                            "ACCOUNT_SUSPENDED",
+                            "NOT_FOUND",
+                            "DROP_GONE",
+                            "DROP_NOT_LIVE",
+                            "ALREADY_CAUGHT",
+                            "ALREADY_REDEEMED",
+                            "OUTSIDE_GEOFENCE",
+                            "GPS_ACCURACY_INSUFFICIENT",
+                            "INVALID_CODE",
+                            "REDEMPTION_WINDOW_CLOSED",
+                            "TRANSFER_CUTOFF_PASSED",
+                            "TRANSFER_LIMIT_REACHED",
+                            "TRANSFER_EXPIRED",
+                            "FANATIC_LIMIT_REACHED",
+                            "ALLOWANCE_EXHAUSTED",
+                            "DROP_IMMUTABLE",
+                            "HANDLE_LOCKED",
+                            "HANDLE_TAKEN",
+                            "RATE_LIMITED",
+                            "VALIDATION_ERROR",
+                            "INTERNAL_ERROR",
+                            "NOT_IMPLEMENTED",
+                            "NOT_READY"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "LOCATION_PERMISSION_REQUIRED",
+                            "ACCOUNT_SUSPENDED",
+                            "NOT_FOUND",
+                            "DROP_GONE",
+                            "DROP_NOT_LIVE",
+                            "ALREADY_CAUGHT",
+                            "ALREADY_REDEEMED",
+                            "OUTSIDE_GEOFENCE",
+                            "GPS_ACCURACY_INSUFFICIENT",
+                            "INVALID_CODE",
+                            "REDEMPTION_WINDOW_CLOSED",
+                            "TRANSFER_CUTOFF_PASSED",
+                            "TRANSFER_LIMIT_REACHED",
+                            "TRANSFER_EXPIRED",
+                            "FANATIC_LIMIT_REACHED",
+                            "ALLOWANCE_EXHAUSTED",
+                            "DROP_IMMUTABLE",
+                            "HANDLE_LOCKED",
+                            "HANDLE_TAKEN",
+                            "RATE_LIMITED",
+                            "VALIDATION_ERROR",
+                            "INTERNAL_ERROR",
+                            "NOT_IMPLEMENTED",
+                            "NOT_READY"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "LOCATION_PERMISSION_REQUIRED",
+                            "ACCOUNT_SUSPENDED",
+                            "NOT_FOUND",
+                            "DROP_GONE",
+                            "DROP_NOT_LIVE",
+                            "ALREADY_CAUGHT",
+                            "ALREADY_REDEEMED",
+                            "OUTSIDE_GEOFENCE",
+                            "GPS_ACCURACY_INSUFFICIENT",
+                            "INVALID_CODE",
+                            "REDEMPTION_WINDOW_CLOSED",
+                            "TRANSFER_CUTOFF_PASSED",
+                            "TRANSFER_LIMIT_REACHED",
+                            "TRANSFER_EXPIRED",
+                            "FANATIC_LIMIT_REACHED",
+                            "ALLOWANCE_EXHAUSTED",
+                            "DROP_IMMUTABLE",
+                            "HANDLE_LOCKED",
+                            "HANDLE_TAKEN",
+                            "RATE_LIMITED",
+                            "VALIDATION_ERROR",
+                            "INTERNAL_ERROR",
+                            "NOT_IMPLEMENTED",
+                            "NOT_READY"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/locations/{id}/today": {
+      "get": {
+        "operationId": "getLocationToday",
+        "summary": "Today's Code (merchant counter screen)",
+        "tags": [
+          "Merchant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getLocationTodayResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED | FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/orgs": {
       "post": {
         "operationId": "createOrg",
@@ -5568,6 +6036,177 @@
           },
           "503": {
             "description": "Error. code: NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/redemptions": {
+      "post": {
+        "operationId": "createRedemption",
+        "summary": "Redeem a catch",
+        "tags": [
+          "Redemptions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "catch_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8
+                  },
+                  "location": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "lat": {
+                        "type": "number"
+                      },
+                      "lng": {
+                        "type": "number"
+                      },
+                      "accuracy_m": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng",
+                      "accuracy_m"
+                    ]
+                  },
+                  "gps_status": {
+                    "type": "string",
+                    "enum": [
+                      "fix_acquired",
+                      "permission_denied",
+                      "no_fix_timeout"
+                    ]
+                  }
+                },
+                "required": [
+                  "catch_id",
+                  "code",
+                  "gps_status"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/createRedemptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED | LOCATION_PERMISSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error. code: ALREADY_REDEEMED | OUTSIDE_GEOFENCE | REDEMPTION_WINDOW_CLOSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: GPS_ACCURACY_INSUFFICIENT | INVALID_CODE | VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error. code: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
             "content": {
               "application/json": {
                 "schema": {

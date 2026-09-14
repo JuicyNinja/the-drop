@@ -42,6 +42,7 @@ async function main(): Promise<void> {
   // Imported after env is set (lib reads env lazily; safe).
   const { catchDrop, reconcileDrop } = await import("@/lib/catches");
   const { seedInventory, seedDropMeta, readInventory, setDecrObserver } = await import("@/lib/redis");
+  const { mintCode } = await import("@/lib/codes");
 
   const pg = new Client({ connectionString: DB });
   await pg.connect();
@@ -56,10 +57,11 @@ async function main(): Promise<void> {
        values ('local',$1,$2,'LT Drop','d',$3,$3, now()-interval '1 minute', now()+interval '1 day', now()+interval '1 hour', now()+interval '2 hour', $4, 'draft') returning id`,
       [org, loc, qt, founder]
     )).rows[0].id as string;
+    const code = mintCode();
     await pg.query(`update drops set status='scheduled' where id=$1`, [id]);
-    await pg.query(`update drops set status='live' where id=$1`, [id]);
+    await pg.query(`update drops set status='live', code=$2 where id=$1`, [id, code]);
     await seedInventory(id, qt);
-    await seedDropMeta(id, { qt, lu: Date.now() + 864e5, ru: new Date(Date.now() + 2 * 864e5).toISOString(), title: "LT Drop" });
+    await seedDropMeta(id, { qt, lu: Date.now() + 864e5, ru: new Date(Date.now() + 2 * 864e5).toISOString(), title: "LT Drop", code });
     return id;
   }
 
@@ -77,6 +79,30 @@ async function main(): Promise<void> {
   const userIds = (await pg.query(`select id from users where handle like 'lt${stamp}u%' order by handle`)).rows.map((r) => r.id as string);
   check(`bulk-created ${USERS} distinct users`, userIds.length === USERS, `users=${userIds.length}`);
 
+  // A network error reaching SRH (never a catch outcome) is retried with the
+  // SAME idempotency key — safe, and exactly what a real mobile client does.
+  // Non-network outcomes (DROP_GONE, ALREADY_CAUGHT, position) are never retried.
+  const isNetworkError = (msg: string) => /fetch failed|ECONNRESET|ECONNREFUSED|socket|EPIPE|network|other side closed/i.test(msg);
+  const catchWithRetry = async (uid: string, dropId: string) => {
+    const key = `${dropId}:${uid}`;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await catchDrop(uid, dropId, key);
+      } catch (e: any) {
+        if (attempt < 8 && isNetworkError(String(e?.message ?? "")) && !e?.code) {
+          await new Promise((r) => setTimeout(r, 25 * (attempt + 1)));
+          continue;
+        }
+        throw e;
+      }
+    }
+  };
+
+  // Warm-up: establish SRH connections so run 1 is not a cold accept-queue
+  // burst. Fire the full set against a throwaway drop; discard results.
+  const warm = await liveDrop(UNITS);
+  await Promise.all(userIds.map((uid) => catchWithRetry(uid, warm).catch(() => undefined)));
+
   // ========================================================================
   // LOAD TEST — 5,000 concurrent catches against 100 units, run 5 times.
   // ========================================================================
@@ -91,7 +117,7 @@ async function main(): Promise<void> {
     const tasks = userIds.map((uid) => async () => {
       inFlight++; if (inFlight > maxInFlight) maxInFlight = inFlight;
       try {
-        const r = await catchDrop(uid, dropId, `${dropId}:${uid}`);
+        const r = await catchWithRetry(uid, dropId);
         return { ok: true as const, position: r.position_number };
       } catch (e: any) {
         return { ok: false as const, code: e?.code ?? "ERR", msg: e?.message };
@@ -128,7 +154,7 @@ async function main(): Promise<void> {
   // touched Postgres it would 404 (NOT_FOUND) or increment dbCalls.
   const ghostId = randomUUID();
   await seedInventory(ghostId, 0); // DECR → -1 → Gone
-  await seedDropMeta(ghostId, { qt: 0, lu: Date.now() + 864e5, ru: null, title: "ghost" });
+  await seedDropMeta(ghostId, { qt: 0, lu: Date.now() + 864e5, ru: null, title: "ghost", code: "GHST".slice(0,4) });
   dbCalls = 0;
   let goneCode = "";
   try { await catchDrop(userIds[0], ghostId, `ghost:${stamp}`); } catch (e: any) { goneCode = e?.code; }

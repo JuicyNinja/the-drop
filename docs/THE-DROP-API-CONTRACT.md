@@ -465,11 +465,13 @@ The client fires `no_fix_timeout` after a **7-second** wait with permission gran
 
 The `unverified` flag is invisible to the customer, visible in the merchant live feed and admin fraud review.
 
+**The redemption response carries no `method` field.** Returning it (or omitting it only for unverified) would leak the unverified flag to the buyer. The method lives only in the merchant feed (`GET /v1/locations/{id}/today`) and admin review.
+
 ```json
 {
   "data": {
     "redemption_id": "uuid",
-    "method": "gps_verified",
+    "redeemed": true,
     "clout_earned": 10,
     "whisper_prompt": true
   }

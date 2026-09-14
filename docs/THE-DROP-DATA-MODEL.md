@@ -426,6 +426,7 @@ create table drops (
   description           text not null,
   terms                 text,
   image_urls            text[],
+  code                  text,                            -- ONE code per drop (PRD §7.3); generated at go-live, not create
 
   quantity_total        integer not null check (quantity_total > 0),
   quantity_remaining    integer not null,
@@ -468,6 +469,13 @@ create index on drops (status, lane, live_at);
 create index on drops (location_id) where status = 'live';
 create index on drops (city_id, status);
 create index on drops (org_id, created_at desc);
+
+-- ONE code per drop (PRD §7.3). Generated at go-live (the moment Redis is
+-- seeded), never at create — a code must not sit on a scheduled drop for days.
+-- Unique across CONCURRENTLY-LIVE drops at a location, or staff reading from two
+-- sheets is ambiguous:
+create unique index drops_live_code_per_location
+  on drops (location_id, code) where status = 'live' and code is not null;
 ```
 
 ### 7.2 Immutability after live — DOCTRINE, enforced by trigger
@@ -537,7 +545,7 @@ create table catches (
   original_user_id  uuid not null references users(id),   -- first catcher, immutable
   position_number   integer not null,
   status            catch_status not null default 'held',
-  code              text not null,                        -- 4-char, 24-symbol alphabet
+  code              text not null,                        -- denormalized copy of drops.code (PRD §7.3), carried for response convenience — NOT a per-catch code
   transfer_count    smallint not null default 0,
   caught_at         timestamptz not null default now(),
   expires_at        timestamptz not null,                 -- = drop.redeem_until

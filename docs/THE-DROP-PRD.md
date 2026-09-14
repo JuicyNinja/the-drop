@@ -329,6 +329,8 @@ Excluded: `0 O 1 I L S 2 Z 8 B` — every character that fails when spoken acros
 
 **One code per drop.** Not per location, not per day.
 
+The code is **generated at go-live**, not at creation, and is **unique across concurrently-live drops at a location**. It is stored on the drop; a catch carries a denormalized copy (`catches.code`) for response convenience. It is NOT a per-catch code — every catcher of a drop shares the one code the staff reads aloud.
+
 Merchants receive a **printable code sheet** containing: the code, the offer description, the date, and the redemption window expiration time. Taped to the register.
 
 Alternative: a manager with admin-level app access acts as sole redemption authority.
