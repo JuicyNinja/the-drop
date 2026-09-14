@@ -46,13 +46,23 @@ begin
   else
     -- Auth row first: users.id references auth.users(id). No password; the
     -- founder signs in through OAuth (WP-3). email_confirmed_at stays null.
+    -- GoTrue scans these token columns into non-null Go strings, so a manual
+    -- insert MUST set them to '' (not NULL) or every GoTrue op touching this
+    -- email fails with "Database error checking email". Real signups get these
+    -- defaults from GoTrue itself; the founder is the one hand-seeded row.
     insert into auth.users (
       id, instance_id, aud, role, email,
       raw_app_meta_data, raw_user_meta_data,
+      confirmation_token, recovery_token, email_change,
+      email_change_token_new, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token,
       created_at, updated_at
     ) values (
       founder_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', founder_email,
       '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+      '', '', '',
+      '', '',
+      '', '', '',
       now(), now()
     )
     on conflict (id) do nothing;

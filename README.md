@@ -40,6 +40,12 @@ The same applies on deploy: after pushing migrations to a hosted Supabase
 project, its PostgREST reloads on its own within a minute, or send the same
 `NOTIFY pgrst, 'reload schema'` to make it immediate.
 
+**Do not run `npm run build` while `next dev` is running.** Both write `.next`,
+and a concurrent dev server corrupts `.next/dev/types/validator.ts`, failing the
+build's type-check with a confusing `Declaration or statement expected` in a
+generated file. Stop the dev server first; if it already happened, `rm -rf .next
+&& npm run build` recovers.
+
 ### Geocoding (Google)
 
 Addresses are geocoded server-side through `lib/geo/geocoder.ts`. With no key,

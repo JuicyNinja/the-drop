@@ -16,7 +16,8 @@
     "db:gate": "tsx scripts/db-gate.ts",
     "wp3:gate": "tsx scripts/wp3-gate.ts",
     "gen:reserved": "tsx scripts/gen-reserved-handles.ts",
-    "wp4:gate": "tsx scripts/wp4-gate.ts"
+    "wp4:gate": "tsx scripts/wp4-gate.ts",
+    "wp5:gate": "tsx scripts/wp5-gate.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",

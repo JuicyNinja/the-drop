@@ -17,6 +17,14 @@ import { Client, DatabaseError } from "pg";
 export const LOCAL_DATABASE_URL =
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
+/**
+ * The well-known Supabase local-development service_role key. Not a secret: it
+ * is the same fixed value on every `supabase start`, used here only to reach
+ * the local GoTrue when SUPABASE_SERVICE_ROLE_KEY is not set in the env.
+ */
+const LOCAL_DEMO_SERVICE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+
 export interface SqlError {
   code: string;
   message: string;
@@ -140,6 +148,36 @@ export async function runGate(
 
     const [authRow] = await q<{ n: string }>("select count(*)::text as n from auth.users where id = $1 and email = 'info@juicyninja.com'", [FOUNDER_ID]);
     fact("founder auth.users row exists", authRow.n, authRow.n === "1");
+
+    // The founder auth row is hand-seeded (base.sql). A seed that leaves
+    // GoTrue's token columns NULL produces an account GoTrue cannot operate on
+    // ("Database error checking email") — an unusable founder that nobody
+    // notices until the day they sign in. Prove the seed is actually usable by
+    // running the exact operation that failed: admin generate_link on the email.
+    // This hits GoTrue over HTTP (independent of this rolled-back transaction).
+    {
+      const supabaseUrl = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
+      const serviceKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ?? LOCAL_DEMO_SERVICE_KEY;
+      let detail = "";
+      let ok = false;
+      try {
+        const res = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {
+          method: "POST",
+          headers: {
+            apikey: serviceKey,
+            authorization: `Bearer ${serviceKey}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ type: "magiclink", email: "info@juicyninja.com" }),
+        });
+        ok = res.ok;
+        detail = ok ? `HTTP ${res.status}` : `HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`;
+      } catch (e) {
+        detail = `request failed: ${e instanceof Error ? e.message : String(e)}`;
+      }
+      fact("founder account is usable via GoTrue (admin generate_link)", detail, ok);
+    }
 
     const [adminRole] = await q<{ n: string }>("select count(*)::text as n from user_roles where user_id = $1 and role = 'admin'", [FOUNDER_ID]);
     fact("founder holds admin role", adminRole.n, adminRole.n === "1");

@@ -44,4 +44,12 @@ describe.skipIf(!databaseUrl)("WP-2 acceptance gate (database invariants)", () =
     const f = report.facts.find((x) => x.label === "founder user_number (by email) is 1");
     expect(f?.value).toBe("1");
   });
+
+  it("the seeded founder account is usable via GoTrue (regression: NULL token columns)", () => {
+    const f = report.facts.find(
+      (x) => x.label === "founder account is usable via GoTrue (admin generate_link)",
+    );
+    expect(f, "GoTrue founder check missing").toBeDefined();
+    expect(f?.ok, `GoTrue founder check failed: ${f?.value}`).toBe(true);
+  });
 });

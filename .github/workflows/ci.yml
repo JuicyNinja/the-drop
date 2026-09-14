@@ -78,9 +78,11 @@ jobs:
       # Applies every migration and both seed files to a throwaway Postgres.
       - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
       # The WP-2 gate: every listed operation must fail at the database layer.
+      # SUPABASE_URL lets the gate reach GoTrue for the founder-usability check.
       - run: npm run db:gate
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          SUPABASE_URL: http://127.0.0.1:54321
 
   build:
     name: build

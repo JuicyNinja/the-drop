@@ -202,6 +202,16 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 - Limits are read from the org row, **never computed from the `tier` enum** — verified by setting an Enterprise org to arbitrary values and confirming behavior
 - Pooled vs. per-location allowance both count correctly
 
+**Decisions recorded 2026-09-13 (during WP-5 execution):**
+
+- **Limits are stored, read, never derived.** `app_create_org` writes max_locations, drops_per_cycle, and drops_pooled_org_level onto the org row: seeded from the tier catalog (`lib/billing/tiers.ts`) for self-serve tiers, set to arbitrary values by an admin for Enterprise. Enforcement (location cap, drop allowance) reads the org row only. The catalog is presentation/seed data used in just two places — seeding at creation and building upgrade_options in a 402 — never for enforcement. Proven: an Enterprise org set to 3 locations / 37 drops caps at exactly those numbers.
+- **The pooled fork lives in one function.** `scopeLocation(pooled, locationId)` returns the org-level scope (null location) when pooled, else the location. Both preview and consume use it. `app_consume_drop_allowance` is an atomic, monotonic, race-safe upsert (increment only if under the limit; never decrement — a cancelled drop still consumed allowance). Proven both ways on one org by switching the flag.
+- **Role gate.** `lib/auth/org-access.ts`: owner/admin reach org, billing, locations, staff, drop creation, and stats; merchant_staff is 403 on all of them (their only surface is Today's Code, WP-8). Drop creation (WP-6) and per-drop stats (WP-13) ship here as role-gated shells returning NOT_IMPLEMENTED for authorized callers; the WP-6/WP-13 and release gates assert none survives. WP-8 inherits a carried-forward grep that no redemption path reads the active address.
+- **Locations are geocoded server-side** through the same `lib/geo/geocoder.ts`; the strict body rejects client lat/lng. Delete is a soft deactivate (drops reference the row). The Add Location control is always shown; the cap is a 402 with the upgrade payload, never a hidden control.
+- **Org creation is self-serve** (creator becomes owner); Enterprise/custom limits require an admin caller.
+- **Founder auth-seed fix.** The hand-seeded founder `auth.users` row left GoTrue's token columns NULL, which broke any GoTrue op on that email ("Database error checking email"). base.sql now sets them to '' so the founder can actually sign in — a latent WP-3 seed bug surfaced by using the founder (admin) in this gate.
+- **The gate is `npm run wp5:gate`** (`scripts/wp5-gate.ts`) against a running dev server; catalog and cycle math are unit-tested in `tests/billing.test.ts`.
+
 ---
 
 ## WP-6 — Drop lifecycle
