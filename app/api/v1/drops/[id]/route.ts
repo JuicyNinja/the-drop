@@ -4,6 +4,8 @@ import { defineRoute } from "@/lib/api/route";
 import { dropResponseSchema, patchDropSchema } from "@/lib/api/drop-schemas";
 import { cancelDrop, getDrop, patchDraft, scheduleDrop } from "@/lib/drops";
 import { orgIdForDrop, requireOwner } from "@/lib/auth/org-access";
+import { getPublicDrop } from "@/lib/board";
+import { verifySession } from "@/lib/auth/session";
 
 /**
  * Edit or transition a drop. Owner/admin only.
@@ -40,3 +42,63 @@ const route = defineRoute(
 );
 
 export const PATCH = route.handler;
+
+/**
+ * API-CONTRACT §4: public drop detail — the shared-link surface. No auth
+ * required; an optional bearer lets `can_catch` reflect the viewer's state.
+ * `can_catch` is server-computed and is a display hint only — POST /v1/catches
+ * (Redis) remains the sole authority on whether a catch actually succeeds.
+ */
+const publicDropSchema = z.object({
+  id: z.string(),
+  lane: z.string(),
+  title: z.string(),
+  description: z.string(),
+  terms: z.string().nullable(),
+  image_urls: z.array(z.string()),
+  quantity_remaining: z.number(),
+  quantity_total: z.number(),
+  pct_remaining: z.number(),
+  price_cents: z.number().nullable(),
+  live_until: z.string().nullable(),
+  redeem_from: z.string().nullable(),
+  redeem_until: z.string().nullable(),
+  status: z.string(),
+  merchant: z.object({
+    org_id: z.string(),
+    name: z.string(),
+    redemption_rate: z.number().nullable(),
+    location: z.object({ name: z.string(), city: z.string(), lat: z.number(), lng: z.number() }).nullable(),
+  }),
+  can_catch: z.boolean(),
+  catch_blocked_reason: z.string().nullable(),
+});
+
+const getRoute = defineRoute(
+  {
+    method: "get",
+    path: "/v1/drops/{id}",
+    operationId: "getPublicDrop",
+    summary: "Public drop detail (shared-link surface)",
+    tags: ["Drops"],
+    auth: "none",
+    request: { params: z.object({ id: z.uuid() }) },
+    response: { data: publicDropSchema },
+    errors: ["NOT_FOUND"],
+  },
+  async ({ params, request }) => {
+    // Optional viewer: a valid bearer refines can_catch; its absence or
+    // invalidity simply yields can_catch=false, reason UNAUTHENTICATED.
+    let viewerId: string | null = null;
+    if (request.headers.get("authorization")) {
+      try {
+        viewerId = (await verifySession(request)).authUserId;
+      } catch {
+        viewerId = null;
+      }
+    }
+    return { data: await getPublicDrop(params.id, viewerId) };
+  },
+);
+
+export const GET = getRoute.handler;

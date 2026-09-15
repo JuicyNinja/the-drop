@@ -18,6 +18,7 @@ Work packages are numbered `WP-n`. Each has a **goal**, **dependencies**, **scop
 4. **When a requirement in this plan conflicts with the PRD, the PRD wins.** When the PRD conflicts with CLAUDE.md, CLAUDE.md wins.
 5. **Do not build ahead.** Phase 2 and Phase 3 tables exist in the schema; their endpoints and UI do not get built in v1 regardless of how straightforward they appear.
 6. **If a requirement appears missing, stop and ask.** Do not infer product decisions. Every ambiguity in this document is an unmade decision, not an invitation.
+7. **A gate connects to exactly what the server connects to.** Three gates (WP-3, WP-6, WP-11) shipped the same defect: a Redis or Postgres client in the gate script read cloud env (`.env.local`) while the running dev server wrote the local stack (SRH / local Postgres via `.env.development.local`), so the gate queried an empty cloud database and reported a phantom failure. The rule, once: **every gate script resolves its clients through the same env precedence the server uses** — `.env.development.local` overrides `.env.local`, matching Next.js dev — and **a new gate uses the shared client modules (`lib/redis.ts`, `lib/supabase/server.ts`, or the `@upstash/redis` / `pg` clients configured from that precedence) rather than hand-rolling a connection or a raw REST call.** A gate that reads a different database than the server writes is not testing the server; it is manufacturing a failure that will be mistaken for a real one three packages later.
 
 ---
 
@@ -548,6 +549,55 @@ Wire this in WP-13 (operator surfaces) or the deployment step; the job functions
 - Type-ahead query uses `tag_search_document`; verified by EXPLAIN showing an index scan on `tags_search`, not a sequential scan. An index that exists but is not used is invisible until the table is large, and by then it is in production.
 - No endpoint anywhere performs free-text search over drop titles or descriptions — **grep-verified**
 - Filtering to a category, opening a drop, and navigating back preserves the filter
+
+**Decisions recorded 2026-09-15 (during WP-11 execution):**
+
+- **On Fire tie-break at equal `pct_remaining` = RECENCY (`live_at` DESC).** At the
+  top of an hour every live drop is `pct_remaining` 1.0, so without a deliberate
+  tie-break On Fire is whatever order the database returned. Recency is
+  size-neutral (freshest-live surfaces first when nothing has heat yet). Catch
+  velocity / absolute count were REJECTED: they favour the larger drop and would
+  reintroduce the exact count bias the percentage metric exists to remove — the
+  gate proves a smaller, newer, lower-rate drop still ranks above a bigger, older,
+  higher-rate one at equal pct. Proximity belongs to the Local cold-start axis,
+  not a global tie-break. Secondary sort in `lib/board.ts`: `pct asc, then live_at desc`.
+- **`pct_remaining` from `drop_pressure`, recomputed every 60s in the scheduler
+  tick** (after reconcile, so it reads the reconciled quantity). The board
+  falls back to `quantity_remaining / quantity_total` for a drop that went live
+  since the last recompute, so a just-live drop still appears (at the cold end).
+- **Cold-start "events" = catches on drops in the city.** Fallback engages while
+  a city is inside its window and disengages when `coldstart_days` elapse OR
+  `coldstart_min_events` catches are recorded, whichever comes first (an
+  unlaunched city, `launched_at` null, counts as in-window). `meta.ranking` is
+  `proximity_fallback` when cold (Local → proximity, Maker/Digital → fill-screen),
+  else `pressure`. Telemetry, not display.
+- **Realtime is on the `drops` table** (added to `supabase_realtime`); a client
+  subscribes and renders `quantity_remaining` / `status`, but the value is
+  DISPLAY ONLY — the catch is decided solely by `POST /v1/catches` (Redis). Proven
+  both directions: a false "gone" Postgres value still lets a catch succeed, and a
+  false "available" value still returns `DROP_GONE`.
+- **Type-ahead runs through the `search_tags` SQL function** so the query matches
+  the `tags_search` GIN index expression exactly and the planner uses the index
+  (EXPLAIN shows a Bitmap scan with `Recheck Cond: tag_search_document(...) @@ …`,
+  not a Seq Scan). PostgREST cannot express a filter over a function-expression
+  index, which is why the query lives in a function. The contract's "drop volume
+  in the active city" final tiebreak is deferred (documented); ranking is
+  exact-prefix, then label-over-synonym, then sort_order.
+- **`/v1/drops/{id}` GET is `auth: none` with an OPTIONAL bearer**: an absent or
+  invalid token yields `can_catch: false, reason UNAUTHENTICATED`; a valid one
+  refines the reason (LOCATION_PERMISSION_REQUIRED / ALREADY_CAUGHT / …). `can_catch`
+  is a display hint — a `true` never promises the catch; Redis remains authoritative.
+- **Seed vs gate wording:** the gate item names `"car wash" → Auto Detail`, but the
+  seeded taxonomy has **Car Wash as its own leaf** and **Auto Detailing** separate,
+  so "car wash" resolves to the Car Wash leaf. The property (a synonym-only term
+  resolves to its owning leaf) is proven with `"car detail"` → Auto Detailing
+  (`matched_on = synonym`), the real synonym for that leaf. The product taxonomy
+  was left unchanged.
+- **Stale-gate hygiene:** the WP-6 concurrency gate read Redis with a hand-rolled
+  REST GET against the cloud `.env.local` URL — wrong Redis and a response shape
+  SRH does not match. Switched it to the `@upstash/redis` client with
+  `.env.development.local` precedence (as WP-3's gate was fixed). The invariant it
+  tests was always correct (`went_live=1`, seeded once); only the read-back was broken.
 
 ---
 

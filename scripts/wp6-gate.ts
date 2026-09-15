@@ -2,23 +2,31 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Client } from "pg";
+import { Redis } from "@upstash/redis";
 
-// Upstash creds (from .env.local) so the gate can read the seeded inventory.
+// Upstash creds so the gate reads the SAME Redis the dev server seeds:
+// .env.development.local (local SRH) outranks the cloud .env.local, matching
+// Next.js dev precedence — otherwise the gate reads cloud and sees null.
 function envLocal(): Record<string, string> {
   const out: Record<string, string> = {};
-  try {
-    for (const line of readFileSync(".env.local", "utf8").split("\n")) {
-      const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-      if (m) out[m[1]] = m[2];
-    }
-  } catch { /* ignore */ }
+  for (const file of [".env.local", ".env.development.local"]) {
+    try {
+      for (const line of readFileSync(file, "utf8").split("\n")) {
+        const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+        if (m) out[m[1]] = m[2].trim();
+      }
+    } catch { /* ignore */ }
+  }
   return out;
 }
 const UP = envLocal();
+// Use the same client the server uses (works against local SRH and cloud
+// Upstash alike), rather than a hand-rolled REST GET whose response shape
+// differs between the two.
+const redis = new Redis({ url: UP.UPSTASH_REDIS_REST_URL, token: UP.UPSTASH_REDIS_REST_TOKEN });
 async function redisGet(key: string): Promise<string | null> {
-  const res = await fetch(`${UP.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`, { headers: { authorization: `Bearer ${UP.UPSTASH_REDIS_REST_TOKEN}` } });
-  const j = (await res.json()) as { result: string | null };
-  return j.result;
+  const v = await redis.get<number | string>(key);
+  return v === null || v === undefined ? null : String(v);
 }
 
 /** WP-6 acceptance gate against a running dev server + local Postgres. */

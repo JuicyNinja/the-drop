@@ -464,13 +464,17 @@
               },
               "reconciled": {
                 "type": "number"
+              },
+              "pressure": {
+                "type": "number"
               }
             },
             "required": [
               "went_live",
               "gone",
               "expired",
-              "reconciled"
+              "reconciled",
+              "pressure"
             ]
           },
           "meta": {
@@ -796,6 +800,590 @@
           "city",
           "region",
           "postal_code"
+        ]
+      },
+      "getBoardResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "local": {
+                "type": "object",
+                "properties": {
+                  "on_fire": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "status",
+                        "merchant"
+                      ]
+                    }
+                  },
+                  "new": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "status",
+                        "merchant"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "on_fire",
+                  "new"
+                ]
+              },
+              "maker": {
+                "type": "object",
+                "properties": {
+                  "on_fire": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "status",
+                        "merchant"
+                      ]
+                    }
+                  },
+                  "new": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "status",
+                        "merchant"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "on_fire",
+                  "new"
+                ]
+              },
+              "digital": {
+                "type": "object",
+                "properties": {
+                  "on_fire": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "status",
+                        "merchant"
+                      ]
+                    }
+                  },
+                  "new": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "status",
+                        "merchant"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "on_fire",
+                  "new"
+                ]
+              }
+            },
+            "required": [
+              "local",
+              "maker",
+              "digital"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "createCatchResponse": {
@@ -1157,6 +1745,161 @@
           }
         },
         "additionalProperties": false
+      },
+      "getPublicDropResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "lane": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "terms": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "image_urls": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "quantity_remaining": {
+                "type": "number"
+              },
+              "quantity_total": {
+                "type": "number"
+              },
+              "pct_remaining": {
+                "type": "number"
+              },
+              "price_cents": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "live_until": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "redeem_from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "redeem_until": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string"
+              },
+              "merchant": {
+                "type": "object",
+                "properties": {
+                  "org_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "redemption_rate": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "location": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string"
+                      },
+                      "lat": {
+                        "type": "number"
+                      },
+                      "lng": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "city",
+                      "lat",
+                      "lng"
+                    ]
+                  }
+                },
+                "required": [
+                  "org_id",
+                  "name",
+                  "redemption_rate",
+                  "location"
+                ]
+              },
+              "can_catch": {
+                "type": "boolean"
+              },
+              "catch_blocked_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "lane",
+              "title",
+              "description",
+              "terms",
+              "image_urls",
+              "quantity_remaining",
+              "quantity_total",
+              "pct_remaining",
+              "price_cents",
+              "live_until",
+              "redeem_from",
+              "redeem_until",
+              "status",
+              "merchant",
+              "can_catch",
+              "catch_blocked_reason"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
       },
       "getDropStatsResponse": {
         "type": "object",
@@ -2201,6 +2944,99 @@
               "token",
               "url"
             ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "listTagsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "leaves": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "slug"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "leaves"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "searchTagsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "group": {
+                  "type": "string"
+                },
+                "matched_on": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "group",
+                "matched_on"
+              ]
+            }
           },
           "meta": {
             "type": "object",
@@ -4526,6 +5362,142 @@
         }
       }
     },
+    "/v1/board": {
+      "get": {
+        "operationId": "getBoard",
+        "summary": "The landing board (On Fire + New per lane)",
+        "tags": [
+          "Board"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "address_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "tag_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "heat",
+                "distance",
+                "ending"
+              ]
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getBoardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/catches": {
       "post": {
         "operationId": "createCatch",
@@ -5006,6 +5978,94 @@
           },
           "409": {
             "description": "Error. code: DROP_IMMUTABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getPublicDrop",
+        "summary": "Public drop detail (shared-link surface)",
+        "tags": [
+          "Drops"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getPublicDropResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": {
@@ -7627,6 +8687,232 @@
           },
           "404": {
             "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tags": {
+      "get": {
+        "operationId": "listTags",
+        "summary": "The category taxonomy tree",
+        "tags": [
+          "Board"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "local",
+                "maker",
+                "digital"
+              ]
+            },
+            "required": false,
+            "name": "lane",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/listTagsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tags/search": {
+      "get": {
+        "operationId": "searchTags",
+        "summary": "Category type-ahead",
+        "tags": [
+          "Board"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "local",
+                "maker",
+                "digital"
+              ]
+            },
+            "required": false,
+            "name": "lane",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/searchTagsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED",
             "content": {
               "application/json": {
                 "schema": {
