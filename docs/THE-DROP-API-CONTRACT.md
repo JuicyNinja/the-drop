@@ -661,12 +661,38 @@ Earns clout. One per redemption.
 ```json
 { "drop_id": "uuid", "redemption_id": "uuid" }
 ```
-Returns a tracked share link token.
+Returns a tracked share link token and its public `/s/{token}` URL. Creating a
+share earns **no** clout.
 
 ### `GET /s/{token}`
-Public redirect. Records the click, credits attribution.
+Public redirect to the shared drop. Records the click for analytics **only** —
+a raw click grants no clout (a bot, a scraper, or the sharer could produce it).
+Implemented under `/v1/shares/{token}/click` and exposed at the short `/s/{token}`
+URL by a rewrite, so the handler stays under `/v1` (invariant #15).
 
-**Clout is granted only on a verified return click.** Platform API verification is deferred — unverifiable content earns nothing.
+### `POST /v1/shares/{token}/verify`
+The verified return click: called by the **authenticated** user who returned
+through the link. Grants the sharer clout **once**, and only if the returner is
+not the sharer (no self-attribution) and the link has not already been attributed
+(repeat returns never compound). Idempotent thereafter.
+```json
+{ "data": { "attributed": true, "clout_earned": 15 } }
+```
+
+**Clout is granted only on a verified return click.** Platform-API content
+verification (TikTok/Instagram) is deferred — the tracked-link return is the v1
+signal; unverifiable content earns nothing.
+
+### `POST /v1/admin/clout/recompute`
+Admin. The hourly job: decay (30-day half-life, referenced to the top of the
+hour), per-city percentile, five tiers, and the top-1% cap on tier 5. Derives
+`clout_scores` from the ledger — **not a clout write path.** Deterministic and
+idempotent within the hour. Production trigger is an Upstash/QStash hourly schedule.
+
+### `POST /v1/admin/merchant-scores/recompute`
+Admin. The daily merchant-score job (§10). Trailing 90-day redemption rate +
+whisper score; new merchants seeded at the cohort median. Production trigger is a
+daily schedule.
 
 ---
 

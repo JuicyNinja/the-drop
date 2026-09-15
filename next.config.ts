@@ -7,7 +7,13 @@ const nextConfig: NextConfig = {
    * every client, web or native.
    */
   async rewrites() {
-    return [{ source: "/v1/:path*", destination: "/api/v1/:path*" }];
+    return [
+      { source: "/v1/:path*", destination: "/api/v1/:path*" },
+      // Public share short link (API-CONTRACT §9 `GET /s/{token}`). The handler
+      // lives under /v1 (every route handler must — invariant #15); this keeps
+      // the short, shareable public URL.
+      { source: "/s/:token", destination: "/api/v1/shares/:token/click" },
+    ];
   },
 };
 

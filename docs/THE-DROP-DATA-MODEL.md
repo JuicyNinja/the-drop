@@ -246,10 +246,19 @@ create table locations (
   lng             numeric(9,6) not null,
   geofence_radius_m integer not null default 150,   -- PRD §7.4
   hours           jsonb,
-  city_id         uuid references cities(id),
+  city_id         uuid not null references cities(id),  -- resolved at create from coords (WP-10)
   active          boolean not null default true,
   created_at      timestamptz not null default now()
 );
+```
+
+**`city_id` is NOT NULL** (migration `20260915000100`). It is resolved at create
+from the geocoded coordinates (nearest city within 60 miles); an address in no
+supported city is a create-time `VALIDATION_ERROR`. A city-less location would
+silently drop every clout event that happens there — no leaderboard to join, no
+error — so the constraint closes that hole at the schema layer.
+```sql
+-- (locations table, continued)
 
 create index on locations (org_id);
 create index locations_geo on locations using gist (ll_to_earth(lat, lng));

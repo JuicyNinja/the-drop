@@ -25,7 +25,7 @@ const envLocal = loadEnv(".env.local");
 const envDev = loadEnv(".env.development.local");
 for (const [k, v] of Object.entries({ ...envLocal, ...envDev })) process.env[k] = v;
 
-const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const SUPABASE_HOST = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).host;
 
 // Load-test scale. Local/manual default is the full 5,000 × 5 (the WP-7
@@ -49,7 +49,8 @@ async function main(): Promise<void> {
   const stamp = Date.now();
   const founder = (await pg.query(`select id from users where user_number=1`)).rows[0].id as string;
   const org = (await pg.query(`insert into organizations (name,lane,tier,max_locations,drops_per_cycle,cycle_anchor_at) values ('LT Org','local','local_enterprise',5,1000,now()) returning id`)).rows[0].id as string;
-  const loc = (await pg.query(`insert into locations (org_id,name,line1,city,region,postal_code,lat,lng) values ($1,'LT','1 Main','Salt Lake City','UT','84101',40.76,-111.89) returning id`, [org]).then(r => r.rows[0].id)) as string;
+  const cityUt = (await pg.query(`select id from cities where name='Salt Lake City' and region='UT'`)).rows[0].id as string;
+  const loc = (await pg.query(`insert into locations (org_id,name,line1,city,region,postal_code,lat,lng,city_id) values ($1,'LT','1 Main','Salt Lake City','UT','84101',40.76,-111.89,$2) returning id`, [org, cityUt]).then(r => r.rows[0].id)) as string;
 
   async function liveDrop(qt: number): Promise<string> {
     const id = (await pg.query(

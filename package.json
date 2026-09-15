@@ -21,7 +21,8 @@
     "wp6:gate": "tsx scripts/wp6-gate.ts",
     "wp7:gate": "tsx scripts/wp7-gate.ts",
     "wp8:gate": "tsx scripts/wp8-gate.ts",
-    "wp9:gate": "tsx scripts/wp9-gate.ts"
+    "wp9:gate": "tsx scripts/wp9-gate.ts",
+    "wp10:gate": "tsx scripts/wp10-gate.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",

@@ -443,6 +443,77 @@ Wire this in WP-13 (operator surfaces) or the deployment step; the job functions
 - Tier 5 population never exceeds 1% of a city's active users
 - Share without a verified return click earns zero
 
+**Decisions recorded 2026-09-14 (during WP-10 execution):**
+
+- **Scores are DERIVED from the append-only ledger; the recompute never mints
+  clout.** `clout_events` has three writers, all in `lib/clout.ts`
+  (`recordRedemptionClout` / `recordWhisperClout` / `recordShareClout`); none
+  takes an amount or reason from a caller. `recomputeAllClout` reads the ledger
+  and rewrites the materialized `clout_scores` — it is not a write path, and
+  there is no admin grant endpoint. Points: redemption 10, whisper 5, verified
+  share 15 (tunable constants in one place).
+- **Decay = exponential, 30-day half-life, referenced to the top of the current
+  hour.** Because a score is a pure function of (ledger, reference hour), running
+  the hourly recompute twice in the same hour yields identical scores and never
+  compounds (requirement 3). The recompute upserts on the `(user_id, city_id)` PK.
+- **Tier 5 is a hard-capped leaderboard, not a percentile band.** It is the top
+  `floor(activeUsers × 0.01)` users in the city (ties broken by user_id for a
+  stable total order); tiers 1–4 are percentile bands (percentile = rank/N;
+  ceilings 0.10 / 0.30 / 0.60). So tier-5 population can never exceed 1% (gate),
+  and **below 100 active users the floor is 0 → tier 5 is UNREACHABLE** rather
+  than rounded up to a lone permanent holder (requirement 2). "Active users" in a
+  city = the distinct users with a clout event there (the ranked population).
+  Clout events with a null city_id belong to no leaderboard and are skipped.
+- **Share attribution (the flagged fraud surface).** Clout is granted ONLY by
+  `POST /v1/shares/{token}/verify` — an authenticated returner confirming the
+  return. A raw click at `/s/{token}` (served under `/v1/shares/{token}/click`
+  via a next.config rewrite, so the handler stays under `/v1` per invariant #15)
+  records analytics only and grants nothing, so **an unreturned share earns zero**
+  (gate). Two rules: the returner must not be the sharer (no self-attribution),
+  and the grant is claimed once with a conditional `verified_at IS NULL` update,
+  so **repeat clicks — any source — never compound** (requirement 1). Platform-API
+  content verification stays deferred; the tracked-link return is the v1 signal.
+  Residual accepted in v1: a sharer could mint many links and have real distinct
+  returners verify each — that is genuine reach, one grant per real return.
+- **Badges are a separate, uncapped, non-decaying system** (`lib/badges.ts`,
+  idempotent `awardBadge`). The clout recompute never touches `user_badges`. The
+  badge CATALOG stays deliberately empty (an open product decision), so there are
+  no slugs to award yet — this WP ships the award + read mechanism the catalog
+  plugs into.
+- **Merchant score (daily):** `redemption_rate = redemptions/catches` over a
+  trailing 90 days (anchored to the top of the day → deterministic); `whisper_score`
+  is a 0..1 composite over the window's whispers. New/insufficient merchants (no
+  catches in the window) are seeded at the **cohort median** redemption_rate of
+  orgs that do have data — never a punishing 0 or a gameable 1. Not a ranking input.
+- **`GET /s/{token}` lives under `/v1`.** The architecture guard requires every
+  route handler under `app/api/v1`; the short public URL is preserved by a
+  next.config rewrite to `/v1/shares/{token}/click` rather than a root route.
+
+**Decisions recorded 2026-09-15 (post-approval fix — a city-less location silently drops clout):**
+
+- **`locations.city_id` is now NOT NULL, resolved at create from the geocoded
+  coordinates** (`lib/cities.ts` `resolveCityId`: nearest city within 60 miles,
+  matched regardless of the city's `active` flag). A location that maps to no
+  supported city is a **create-time `VALIDATION_ERROR`** the merchant sees, never
+  a silent downstream failure. Migration `20260915000100` backfills any legacy
+  null-city location to its nearest city (dev-data hygiene; production is fresh)
+  then sets the constraint. Root cause: `createLocation` geocoded lat/lng but
+  never set `city_id`, so every clout event there joined no leaderboard silently.
+- **The recompute counts events that join no city** (`skipped_no_city`, surfaced
+  on `POST /v1/admin/clout/recompute`) and logs a warning. Expected value 0 —
+  above 0 is a bug report that finds itself. Never a silent drop.
+- **A null-city event retroactively joins on the next recompute** once its
+  location has a city. The recompute derives each null-city event's city from its
+  **live source record** (redemption/whisper → location → city, share → drop →
+  city), not a frozen value, so nothing is permanently orphaned. Events written
+  with a city keep it as an authoritative snapshot. (`clout_events` is
+  append-only, so this resolve-at-read is also the only correct mechanism —
+  the stored city can never be rewritten.)
+- **Stale-gate hygiene (WP-9 standing directive, "WP-5's will be next"):** the
+  WP-5 gate asserted `POST /v1/drops` → `501`, obsolete since WP-6 made drop
+  creation real. Fixed to post a valid body and assert the real `201` (draft),
+  keeping the per-drop-stats `501` (still a WP-13 placeholder). Re-run 17/17.
+
 ---
 
 ## WP-11 — Board and ranking

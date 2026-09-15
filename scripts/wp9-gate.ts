@@ -21,7 +21,7 @@ import { Redis } from "@upstash/redis";
  */
 
 const BASE = process.env.APP_URL ?? "http://127.0.0.1:3000";
-const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const CLIENT = { "x-client": "web", "x-client-version": "1.0.0" };
 
 function loadEnvLocal(): Record<string, string> {

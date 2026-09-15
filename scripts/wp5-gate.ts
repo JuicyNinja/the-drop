@@ -9,7 +9,7 @@ import { Client } from "pg";
  */
 
 const BASE = process.env.APP_URL ?? "http://127.0.0.1:3000";
-const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const CLIENT = { "x-client": "web", "x-client-version": "1.0.0" };
 const CYCLE_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -85,17 +85,22 @@ async function main(): Promise<void> {
   // ========================================================================
   // GATE 1 — merchant_staff receives 403 on drop creation, billing, and stats.
   // ========================================================================
-  const sDrop = await api("/v1/drops", { method: "POST", token: staff.token, body: { location_id: locA } });
+  // A valid body, so the role gate (requireOwner) is what's exercised — not body
+  // validation. Drop creation is real since WP-6, so owner → 201 (a draft), not
+  // the WP-5-era 501 shell. Per-drop stats remains a WP-13 501 placeholder.
+  const validDrop = { location_id: locA, title: "Role Gate Drop", description: "d", quantity_total: 1 };
+  const sDrop = await api("/v1/drops", { method: "POST", token: staff.token, body: validDrop });
   const sBilling = await api(`/v1/orgs/${orgA}/billing`, { token: staff.token });
   const sStats = await api(`/v1/drops/${dropId}/stats`, { token: staff.token });
   check("1. staff → 403 on POST /v1/drops (drop creation)", sDrop.status === 403 && sDrop.body.error?.code === "FORBIDDEN", `${sDrop.status} ${JSON.stringify(sDrop.body.error ?? sDrop.body)}`);
   check("1. staff → 403 on GET /v1/orgs/{id}/billing", sBilling.status === 403 && sBilling.body.error?.code === "FORBIDDEN", `${sBilling.status} ${JSON.stringify(sBilling.body.error ?? sBilling.body)}`);
   check("1. staff → 403 on GET /v1/drops/{id}/stats", sStats.status === 403 && sStats.body.error?.code === "FORBIDDEN", `${sStats.status} ${JSON.stringify(sStats.body.error ?? sStats.body)}`);
-  // owner passes the gate (reaches the WP-6/WP-13 boundary; billing is real)
-  const oDrop = await api("/v1/drops", { method: "POST", token: owner.token, body: { location_id: locA } });
+  // owner passes the role gate: drop creation is real (201 draft), billing is
+  // real (200), per-drop stats is still a WP-13 placeholder (501).
+  const oDrop = await api("/v1/drops", { method: "POST", token: owner.token, body: validDrop });
   const oBilling = await api(`/v1/orgs/${orgA}/billing`, { token: owner.token });
   const oStats = await api(`/v1/drops/${dropId}/stats`, { token: owner.token });
-  check("1. owner passes: drop=501, billing=200, stats=501", oDrop.status === 501 && oBilling.status === 200 && oStats.status === 501, `drop=${oDrop.status} billing=${oBilling.status} stats=${oStats.status}`);
+  check("1. owner passes: drop=201 (real draft), billing=200, stats=501 (WP-13 placeholder)", oDrop.status === 201 && oBilling.status === 200 && oStats.status === 501, `drop=${oDrop.status} billing=${oBilling.status} stats=${oStats.status}`);
 
   // ========================================================================
   // GATE 2 — limits read from the org row, never the tier enum.

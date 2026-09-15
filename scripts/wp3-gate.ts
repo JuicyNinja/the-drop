@@ -14,7 +14,7 @@ import { Redis } from "@upstash/redis";
  */
 
 const BASE = process.env.APP_URL ?? "http://127.0.0.1:3000";
-const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
 function loadEnvLocal(): Record<string, string> {
   // Same precedence Next.js uses in dev: .env.development.local (the local stack

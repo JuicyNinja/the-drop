@@ -5,7 +5,7 @@ import { Client } from "pg";
 /** WP-8 redemption gate against a running dev server + local Postgres. */
 
 const BASE = process.env.APP_URL ?? "http://127.0.0.1:3000";
-const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const CLIENT = { "x-client": "web", "x-client-version": "1.0.0" };
 const SLC = { lat: 40.7608, lng: -111.891 };
 const NYC = { lat: 40.758, lng: -73.9855 };

@@ -2,6 +2,7 @@ import { ApiError } from "@/lib/api/errors";
 import { sanitizeText } from "@/lib/sanitize";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getGeocoder } from "@/lib/geo/geocoder";
+import { resolveCityId } from "@/lib/cities";
 import { currentCycle } from "@/lib/billing/allowance";
 import { isSelfServeTier, seedLimitsFor, upgradeOptions } from "@/lib/billing/tiers";
 import { isAdmin } from "@/lib/auth/org-access";
@@ -176,9 +177,18 @@ export async function createLocation(org: OrgRecord, input: CreateLocationInput)
   };
   const geo = await getGeocoder().geocode(clean);
 
+  // Every location must resolve to a known city, or clout earned here would join
+  // no leaderboard. A miss is a create-time error the merchant can act on.
+  const cityId = await resolveCityId(geo.lat, geo.lng);
+  if (cityId === null) {
+    throw new ApiError("VALIDATION_ERROR", "This address is not within a supported city.", {
+      address: [{ path: "city", message: "no_city_within_range" }],
+    });
+  }
+
   const { data, error } = await getServiceClient()
     .from("locations")
-    .insert({ org_id: org.id, ...clean, lat: geo.lat, lng: geo.lng })
+    .insert({ org_id: org.id, ...clean, lat: geo.lat, lng: geo.lng, city_id: cityId })
     .select(LOCATION_COLUMNS)
     .single();
   if (error) throw new Error(`create location failed: ${error.message}`);
@@ -234,6 +244,15 @@ export async function updateLocation(locationId: string, patch: PatchLocationInp
     const geo = await getGeocoder().geocode(merged);
     update.lat = geo.lat;
     update.lng = geo.lng;
+    // The address moved, so re-resolve the city. A move out of every supported
+    // city is a rejected edit, not a silently orphaned location.
+    const cityId = await resolveCityId(geo.lat, geo.lng);
+    if (cityId === null) {
+      throw new ApiError("VALIDATION_ERROR", "This address is not within a supported city.", {
+        address: [{ path: "city", message: "no_city_within_range" }],
+      });
+    }
+    update.city_id = cityId;
   }
   if (Object.keys(update).length === 0) return existing;
 

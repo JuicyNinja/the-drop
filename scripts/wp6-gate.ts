@@ -24,7 +24,7 @@ async function redisGet(key: string): Promise<string | null> {
 /** WP-6 acceptance gate against a running dev server + local Postgres. */
 
 const BASE = process.env.APP_URL ?? "http://127.0.0.1:3000";
-const DB = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const CLIENT = { "x-client": "web", "x-client-version": "1.0.0" };
 
 async function api(path: string, opts: { method?: string; body?: unknown; token?: string; idem?: string } = {}): Promise<{ status: number; body: any }> {
