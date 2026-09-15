@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   OPENAPI_FILE,
   contractPathFor,
@@ -11,6 +11,16 @@ import {
 const ROOT = path.resolve(__dirname, "..");
 
 describe("openapi.json (the native contract)", () => {
+  // Generate ONCE and reuse. Building the document imports every route module;
+  // doing that per-test (×6) starved this file under the parallel suite and
+  // produced flaky timeouts. One generation, then synchronous assertions.
+  let doc: Awaited<ReturnType<typeof generateOpenApiDocument>>;
+  let generated: string;
+  beforeAll(async () => {
+    doc = await generateOpenApiDocument(ROOT);
+    generated = serializeOpenApi(doc);
+  }, 60000);
+
   it("maps route file locations to contract paths", () => {
     expect(contractPathFor(path.join("app", "api", "v1", "health", "route.ts"))).toBe(
       "/v1/health",
@@ -23,14 +33,15 @@ describe("openapi.json (the native contract)", () => {
     ).toBe("/v1/orgs/{id}/locations");
   });
 
-  it("is generated from every route file under app/api/v1", async () => {
-    const doc = await generateOpenApiDocument(ROOT);
+  it("is generated from every route file under app/api/v1", () => {
     expect(doc.openapi).toBe("3.1.0");
     expect(Object.keys(doc.paths ?? {})).toEqual([
       "/v1/addresses",
       "/v1/addresses/{id}",
       "/v1/admin/clout/recompute",
       "/v1/admin/merchant-scores/recompute",
+      "/v1/admin/notifications/digest",
+      "/v1/admin/notifications/dispatch",
       "/v1/admin/scheduler/tick",
       "/v1/admin/transfers/sweep",
       "/v1/auth/handle-available",
@@ -47,6 +58,8 @@ describe("openapi.json (the native contract)", () => {
       "/v1/drops/{id}/duplicate",
       "/v1/drops/{id}/encore",
       "/v1/drops/{id}/stats",
+      "/v1/follows",
+      "/v1/follows/{org_id}",
       "/v1/health",
       "/v1/locations/{id}",
       "/v1/locations/{id}/code-sheet.pdf",
@@ -75,14 +88,16 @@ describe("openapi.json (the native contract)", () => {
       "/v1/users/me/handle-search",
       "/v1/users/me/location-drift",
       "/v1/users/me/location-permission",
+      "/v1/users/me/notification-prefs",
+      "/v1/users/me/notifications",
+      "/v1/users/me/push-subscriptions",
       "/v1/users/me/walkthrough/complete",
       "/v1/users/me/walkthrough/skip",
       "/v1/whispers",
     ]);
-  }, 20000);
+  });
 
-  it("registers authenticated routes with bearer security and 401", async () => {
-    const doc = await generateOpenApiDocument(ROOT);
+  it("registers authenticated routes with bearer security and 401", () => {
     const me = (doc.paths?.["/v1/users/me"] as { get: { security: unknown[]; responses: Record<string, unknown> } }).get;
     expect(me.security).toEqual([{ bearerAuth: [] }]);
     expect(Object.keys(me.responses)).toContain("401");
@@ -94,10 +109,9 @@ describe("openapi.json (the native contract)", () => {
     // The per-drop stats route is still a WP-13 placeholder (501).
     const stats = (doc.paths?.["/v1/drops/{id}/stats"] as { get: { responses: Record<string, unknown> } }).get;
     expect(Object.keys(stats.responses)).toContain("501");
-  }, 20000);
+  });
 
-  it("documents both operational routes as header-exempt and unauthenticated", async () => {
-    const doc = await generateOpenApiDocument(ROOT);
+  it("documents both operational routes as header-exempt and unauthenticated", () => {
     for (const p of ["/v1/health", "/v1/ready"]) {
       const op = (doc.paths?.[p] as { get: Record<string, unknown> }).get;
       expect(op.security).toEqual([]);
@@ -105,19 +119,17 @@ describe("openapi.json (the native contract)", () => {
     }
     const ready = (doc.paths?.["/v1/ready"] as { get: { responses: Record<string, unknown> } }).get;
     expect(Object.keys(ready.responses).sort()).toEqual(["200", "500", "503"]);
-  }, 20000);
+  });
 
-  it("matches the committed openapi.json (drift check)", async () => {
+  it("matches the committed openapi.json (drift check)", () => {
     const committed = fs
       .readFileSync(path.join(ROOT, OPENAPI_FILE), "utf8")
       .replace(/\r\n/g, "\n");
-    const generated = serializeOpenApi(await generateOpenApiDocument(ROOT));
     expect(committed).toBe(generated);
-  }, 20000);
+  });
 
   it("generation is deterministic", async () => {
-    const a = serializeOpenApi(await generateOpenApiDocument(ROOT));
     const b = serializeOpenApi(await generateOpenApiDocument(ROOT));
-    expect(a).toBe(b);
-  }, 20000);
+    expect(generated).toBe(b);
+  }, 40000);
 });

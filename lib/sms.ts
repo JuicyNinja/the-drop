@@ -69,6 +69,11 @@ export function getSmsSender(): SmsSender {
         env.TWILIO_FROM_NUMBER,
       );
     } else {
+      // Boot validation forbids missing Twilio in production; this is the second,
+      // local guard so the dev sender can never silently swallow SMS in production.
+      if (env.APP_ENV === "production") {
+        throw new Error("Refusing the dev SMS sender in production: set TWILIO_ACCOUNT_SID/AUTH_TOKEN/FROM_NUMBER.");
+      }
       sender = new DevSmsSender();
     }
   }

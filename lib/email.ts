@@ -1,4 +1,5 @@
 import { getEnv } from "@/lib/env";
+import { recordDevNotification } from "@/lib/redis";
 
 /**
  * Transactional email behind a provider interface. WP-3 uses it for the
@@ -21,6 +22,7 @@ export class DevEmailSender implements EmailSender {
   async send(msg: { to: string; subject: string; text: string }): Promise<{ id: string }> {
     DevEmailSender.sent.push({ ...msg, at: new Date().toISOString() });
     console.log(`[dev-email] to=${msg.to} subject=${JSON.stringify(msg.subject)}`);
+    await recordDevNotification("email", msg.to, msg.subject);
     return { id: `dev-${DevEmailSender.sent.length}` };
   }
 }
@@ -57,10 +59,14 @@ let sender: EmailSender | undefined;
 export function getEmailSender(): EmailSender {
   if (!sender) {
     const env = getEnv();
-    sender =
-      env.RESEND_API_KEY && env.RESEND_FROM
-        ? new ResendEmailSender(env.RESEND_API_KEY, env.RESEND_FROM)
-        : new DevEmailSender();
+    if (env.RESEND_API_KEY && env.RESEND_FROM) {
+      sender = new ResendEmailSender(env.RESEND_API_KEY, env.RESEND_FROM);
+    } else {
+      if (env.APP_ENV === "production") {
+        throw new Error("Refusing the dev email sender in production: set RESEND_API_KEY/RESEND_FROM.");
+      }
+      sender = new DevEmailSender();
+    }
   }
   return sender;
 }

@@ -42,6 +42,11 @@ const envObject = z.object({
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM: z.string().min(1).optional(),
 
+  // --- Web Push (VAPID). Absent → dev push sender that logs. ---
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_SUBJECT: z.string().min(1).optional(), // mailto: or https: contact
+
   // --- OAuth identity providers. Absent → dev identity provider. ---
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
@@ -66,7 +71,21 @@ const envObject = z.object({
  * other required var. Each provider ALSO refuses its dev impl in production at
  * the factory (defense in depth).
  */
-const PRODUCTION_REQUIRED = ["GOOGLE_GEOCODING_API_KEY", "STRIPE_SECRET_KEY"] as const;
+const PRODUCTION_REQUIRED = [
+  "GOOGLE_GEOCODING_API_KEY",
+  "STRIPE_SECRET_KEY",
+  // Notification providers (WP-12). The routing matrix requires real SMS, email,
+  // and push in production; a dev sender that silently logs would drop the demand
+  // engine. Required at boot, and refused at each factory (defense in depth).
+  "TWILIO_ACCOUNT_SID",
+  "TWILIO_AUTH_TOKEN",
+  "TWILIO_FROM_NUMBER",
+  "RESEND_API_KEY",
+  "RESEND_FROM",
+  "VAPID_PUBLIC_KEY",
+  "VAPID_PRIVATE_KEY",
+  "VAPID_SUBJECT",
+] as const;
 
 const envSchema = envObject.superRefine((val, ctx) => {
   if (val.APP_ENV !== "production") return;

@@ -624,6 +624,56 @@ Wire this in WP-13 (operator surfaces) or the deployment step; the job functions
 - Category/radius matches receive email only — never push, never SMS
 - Digest respects `digest_hour_local`
 
+**Decisions recorded 2026-09-15 (during WP-12 execution):**
+
+- **Fan-out is a QUEUE, not a synchronous send.** Enqueue writes `notifications`
+  rows (DB only — no provider call) and is what the triggering event does:
+  `runGoLive` calls `enqueueDropLive`, the scheduler tick runs the window-closing
+  / nearly-gone scans. Dispatch (`POST /v1/admin/notifications/dispatch`, its own
+  cron cadence) drains the queue through the providers. So a drop going live to
+  500 Fanatics writes 500 rows fast and a slow/failing provider can NEVER delay
+  or block the go-live transition — go-live calls no provider. Enqueue in go-live
+  is best-effort (try/catch): a failure to enqueue never un-lives a live drop.
+- **Delivery idempotency is enforced two ways.** Enqueue writes one row per
+  `(user, event, channel)` via `ON CONFLICT (user_id, dedup_key) DO NOTHING`
+  (`dedup_key = '<kind>:<ref>:<channel>'`), so a retried fan-out never duplicates
+  — "one per user per event" means one per channel (a Fanatic legitimately gets
+  both an SMS and a push row for a drop-live). Dispatch CLAIMS each row with a
+  conditional `sent_at IS NULL → now()` update before sending, so a retried or
+  concurrent dispatcher never sends the same alert twice (proven: two dispatch
+  runs → one SMS, one email).
+- **Providers behind interfaces, dev impls, and a hard production guard.** Push
+  joins SMS/email as a provider interface (`lib/push.ts`; DevPushSender logs +
+  mirrors to Redis, WebPushSender uses `web-push` lazily). The dev SMS/email/push
+  senders now REFUSE to run when `APP_ENV=production` (factory guard), and
+  `TWILIO_*`, `RESEND_*`, `VAPID_*` were added to the boot-time `PRODUCTION_REQUIRED`
+  set — a dev sender cannot reach production two ways over (env test asserts it).
+- **Routing matrix (§9.2) by tier.** Drop-live: Fanatic → SMS + push, Follower →
+  push + in-app, category/radius match (not following) → email only. Channels are
+  gated by the user's notification prefs (`push/email/sms_enabled`); in-app is
+  never gated; transfer SMS bypasses prefs entirely (WP-9). No quiet hours.
+- **"Nearly gone / viewed" ≈ Fanatics + Followers who did not catch (KNOWN
+  BEHAVIOR, not a gap).** v1 has no per-user view tracking, and the matrix scopes
+  nearly-gone to those tiers, so "viewed" is taken as "was notified of the drop."
+  Consequence: a Fanatic/Follower who never opened the drop still gets the
+  nearly-gone push — mildly noisy, never wrong (it only reaches people who asked
+  to hear about the org). Precise per-user view tracking is a deliberate later
+  addition, not a defect.
+- **Digest hour is resolved against the user's IANA TIMEZONE, DST-correct — never
+  UTC.** `digest_hour_local` is a local hour, so comparing it to a UTC hour would
+  page a Salt Lake buyer at 1–2am. Users carry a `timezone` (IANA name), defaulted
+  at registration from their Home city (`cities.timezone`; launch market = Utah =
+  `America/Denver`); the hourly digest computes each user's local hour with
+  `Intl.DateTimeFormat` (handles DST). Resolution order: the user's timezone, else
+  the active address's city timezone, else the launch-market default — never UTC.
+  One combined email per user per LOCAL day. Local drops match the active
+  address's city, Maker/Digital on preference tags.
+- **Test-infra:** the openapi test now builds the spec ONCE in `beforeAll` and
+  asserts synchronously — regenerating it per-test (×6) imported the whole route
+  set six times and starved the file under the parallel suite, producing flaky
+  timeouts as the route count grew. The env/health tests were updated for the new
+  production-required providers.
+
 ---
 
 ## WP-13 — Buyer and operator UI

@@ -163,17 +163,26 @@ export async function getIdempotencyResult<T>(
  * production (Twilio) sender never calls this. Best-effort: a Redis hiccup must
  * never break an actual send.
  */
-export const devSmsKey = (to: string): string => `dev:sms:${to}`;
+export const devNotificationKey = (channel: string, to: string): string => `dev:${channel}:${to}`;
 
-export async function recordDevSms(to: string, body: string): Promise<void> {
+/** Mirror a dev-sent notification (sms | email | push) to a short-lived, capped
+ *  Redis list keyed by channel + recipient, so an out-of-process gate can prove a
+ *  send happened. The production senders never call this. */
+export async function recordDevNotification(channel: string, to: string, summary: string): Promise<void> {
   try {
-    const key = devSmsKey(to);
-    await redis().lpush(key, JSON.stringify({ to, body, at: new Date().toISOString() }));
+    const key = devNotificationKey(channel, to);
+    // `body` is the message text; kept as the field name for the WP-9 SMS gate.
+    await redis().lpush(key, JSON.stringify({ to, body: summary, at: new Date().toISOString() }));
     await redis().ltrim(key, 0, 49);
     await redis().expire(key, 3600);
   } catch {
     /* observability only; never fail a send on it */
   }
+}
+
+/** Back-compat for the transfer SMS path (WP-9): key stays `dev:sms:<phone>`. */
+export async function recordDevSms(to: string, body: string): Promise<void> {
+  await recordDevNotification("sms", to, body);
 }
 
 /** Readiness probe. Throws if Redis does not answer PING. */

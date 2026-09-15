@@ -4,6 +4,7 @@ import { sanitizeText } from "@/lib/sanitize";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getUserById, normalizeUserRow, type UserRecord } from "@/lib/users";
 import { getGeocoder } from "@/lib/geo/geocoder";
+import { resolveTimezone } from "@/lib/cities";
 
 /**
  * Registration completion: turns an authenticated identity (email from OAuth)
@@ -159,6 +160,16 @@ export async function completeRegistration(
       })
       .eq("id", user.active_address_id);
     if (geoErr) throw new Error(`home geocode store failed: ${geoErr.message}`);
+  }
+
+  // Default the user's timezone from the Home city (WP-12): the daily digest
+  // schedules against the user's LOCAL hour, DST-correct. Best-effort — a
+  // registration never fails on it; the digest falls back to the active
+  // address's city timezone when this is null.
+  const tz = await resolveTimezone(geo.lat, geo.lng);
+  if (tz) {
+    const { error: tzErr } = await svc.from("users").update({ timezone: tz }).eq("id", user.id);
+    if (tzErr) console.error(`[registration] timezone default failed for ${user.id}`, tzErr.message);
   }
 
   return user;

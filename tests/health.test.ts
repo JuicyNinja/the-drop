@@ -24,6 +24,11 @@ describe("GET /v1/health (API-CONTRACT §1.7, liveness)", () => {
       APP_ENV: "production",
       GOOGLE_GEOCODING_API_KEY: "prod-key", // required in production (dev geocoder must not ship)
       STRIPE_SECRET_KEY: "sk_prod", // required in production (dev subscription gateway must not ship)
+      // Notification providers are also required in production (WP-12): a dev
+      // SMS/email/push sender must never ship.
+      TWILIO_ACCOUNT_SID: "sid", TWILIO_AUTH_TOKEN: "tok", TWILIO_FROM_NUMBER: "+15550001111",
+      RESEND_API_KEY: "re", RESEND_FROM: "drops@example.com",
+      VAPID_PUBLIC_KEY: "vpub", VAPID_PRIVATE_KEY: "vpriv", VAPID_SUBJECT: "mailto:ops@example.com",
       NEXT_PUBLIC_SUPABASE_URL: "http://192.0.2.1:1",
       UPSTASH_REDIS_REST_URL: "http://192.0.2.1:2",
     });

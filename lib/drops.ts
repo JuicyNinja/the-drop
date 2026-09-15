@@ -331,6 +331,20 @@ export async function runGoLive(now: Date = new Date()): Promise<{ went_live: st
     });
     wentLive.push(id);
   }
+
+  // Fan-out is QUEUED, not synchronous: enqueue drop-live notification rows (a
+  // DB write only — no SMS/push/email call here), so a slow or failing provider
+  // can never delay or block the go-live transition above. The dispatcher sends
+  // them separately. Enqueue is idempotent (dedup) and best-effort: a failure to
+  // enqueue must not undo a drop that is already live.
+  const { enqueueDropLive } = await import("@/lib/notifications");
+  for (const id of wentLive) {
+    try {
+      await enqueueDropLive(id);
+    } catch (e) {
+      console.error(`[go-live] drop-live enqueue failed for ${id} (drop is live regardless)`, e instanceof Error ? e.message : e);
+    }
+  }
   return { went_live: wentLive };
 }
 

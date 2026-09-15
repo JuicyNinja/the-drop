@@ -15,14 +15,29 @@ import { distanceMiles } from "@/lib/geo/distance";
  */
 export const CITY_MATCH_MAX_MILES = 60;
 
-export async function resolveCityId(lat: number, lng: number): Promise<string | null> {
-  const { data, error } = await getServiceClient().from("cities").select("id, lat, lng");
+/** Fallback timezone for the launch market, used only when neither the user's
+ *  timezone nor any resolvable city timezone is available. Never UTC. */
+export const DEFAULT_TIMEZONE = "America/Denver";
+
+/** The nearest city within the metro radius (id + IANA timezone), or null. */
+export async function resolveCity(lat: number, lng: number): Promise<{ id: string; timezone: string } | null> {
+  const { data, error } = await getServiceClient().from("cities").select("id, lat, lng, timezone");
   if (error) throw new Error(`load cities failed: ${error.message}`);
-  let best: { id: string; miles: number } | null = null;
+  let best: { id: string; timezone: string; miles: number } | null = null;
   for (const c of data ?? []) {
     const miles = distanceMiles({ lat, lng }, { lat: Number(c.lat), lng: Number(c.lng) });
-    if (best === null || miles < best.miles) best = { id: c.id as string, miles };
+    if (best === null || miles < best.miles) best = { id: c.id as string, timezone: (c.timezone as string) ?? DEFAULT_TIMEZONE, miles };
   }
   if (best === null || best.miles > CITY_MATCH_MAX_MILES) return null;
-  return best.id;
+  return { id: best.id, timezone: best.timezone };
+}
+
+export async function resolveCityId(lat: number, lng: number): Promise<string | null> {
+  return (await resolveCity(lat, lng))?.id ?? null;
+}
+
+/** The IANA timezone of the nearest city to a coordinate, or null when no city
+ *  is within range. */
+export async function resolveTimezone(lat: number, lng: number): Promise<string | null> {
+  return (await resolveCity(lat, lng))?.timezone ?? null;
 }

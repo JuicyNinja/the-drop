@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/auth/org-access";
 import { runClose, runGoLive } from "@/lib/drops";
 import { reconcileDrop } from "@/lib/catches";
 import { recomputeAllPressure } from "@/lib/board";
+import { enqueueWindowClosing, enqueueNearlyGone } from "@/lib/notifications";
 import { getServiceClient } from "@/lib/supabase/server";
 
 /**
@@ -28,6 +29,7 @@ const route = defineRoute(
         expired: z.array(z.string()),
         reconciled: z.number(),
         pressure: z.number(),
+        notifications_enqueued: z.number(),
       }),
     },
     errors: ["FORBIDDEN"],
@@ -51,7 +53,13 @@ const route = defineRoute(
     // Pressure recompute (60s): pct_remaining for the board, from the reconciled
     // quantity_remaining. Runs after reconcile so it reads the fresh value.
     const pressure = (await recomputeAllPressure()).drops;
-    return { data: { went_live: live.went_live, gone: closed.gone, expired: closed.expired, reconciled, pressure } };
+
+    // Time/threshold-based notification scans — ENQUEUE only (the dispatcher
+    // sends). Window-closing fires ~2h before redeem_until; nearly-gone at ~85%
+    // claimed. Both idempotent (dedup per drop).
+    const wc = await enqueueWindowClosing();
+    const ng = await enqueueNearlyGone();
+    return { data: { went_live: live.went_live, gone: closed.gone, expired: closed.expired, reconciled, pressure, notifications_enqueued: wc.enqueued + ng.enqueued } };
   },
 );
 

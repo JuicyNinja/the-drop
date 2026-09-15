@@ -34,17 +34,28 @@ describe("lib/env", () => {
 
   it("requires dev-fallback provider keys in production (they must not ship)", () => {
     const prod = { ...VALID_ENV, APP_ENV: "production" as const };
-    // Both dev-fallback keys are required in production.
-    expect(() => parseEnv(prod)).toThrow(/GOOGLE_GEOCODING_API_KEY is required/);
-    expect(() => parseEnv(prod)).toThrow(/STRIPE_SECRET_KEY is required/);
-    // Missing just Stripe still fails on Stripe.
-    expect(() =>
-      parseEnv({ ...prod, GOOGLE_GEOCODING_API_KEY: "g" }),
-    ).toThrow(/STRIPE_SECRET_KEY is required/);
-    // Both present → fine.
-    expect(
-      parseEnv({ ...prod, GOOGLE_GEOCODING_API_KEY: "g", STRIPE_SECRET_KEY: "s" }).APP_ENV,
-    ).toBe("production");
+    // Every dev-fallback provider is required in production — geocoder, billing,
+    // AND the notification providers (WP-12): a dev SMS/email/push sender must
+    // never reach production and silently drop the demand engine.
+    for (const key of [
+      "GOOGLE_GEOCODING_API_KEY", "STRIPE_SECRET_KEY",
+      "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER",
+      "RESEND_API_KEY", "RESEND_FROM",
+      "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT",
+    ]) {
+      expect(() => parseEnv(prod), `${key} must be required in production`).toThrow(
+        new RegExp(`${key} is required`),
+      );
+    }
+    // All present → fine.
+    const complete = {
+      ...prod,
+      GOOGLE_GEOCODING_API_KEY: "g", STRIPE_SECRET_KEY: "s",
+      TWILIO_ACCOUNT_SID: "sid", TWILIO_AUTH_TOKEN: "tok", TWILIO_FROM_NUMBER: "+15550001111",
+      RESEND_API_KEY: "re", RESEND_FROM: "drops@example.com",
+      VAPID_PUBLIC_KEY: "vpub", VAPID_PRIVATE_KEY: "vpriv", VAPID_SUBJECT: "mailto:ops@example.com",
+    };
+    expect(parseEnv(complete).APP_ENV).toBe("production");
     // Not required outside production.
     expect(parseEnv({ ...VALID_ENV, APP_ENV: "staging" }).APP_ENV).toBe("staging");
     expect(parseEnv({ ...VALID_ENV, APP_ENV: "local" }).APP_ENV).toBe("local");
