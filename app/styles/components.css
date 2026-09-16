@@ -598,3 +598,40 @@
 .you-phone { display: flex; align-items: baseline; gap: var(--s-3); }
 .phone-verified { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--signal); }
 .phone-unverified { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey); }
+
+/* ===================== MERCHANT PROFILE (invariant #11) ================ */
+.profile-head { display: flex; align-items: center; gap: var(--s-4); }
+.profile-name { font-family: var(--font-display); font-weight: 800; font-size: var(--t-xl); color: var(--ink); }
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s-4); }
+.profile-card {
+  display: flex; flex-direction: column; gap: var(--s-3);
+  padding: var(--s-4); border: 1px solid var(--hairline); border-radius: var(--r-tile);
+  background: var(--hall); text-decoration: none; box-shadow: var(--sh-tile);
+}
+.profile-card-title { font-size: var(--t-lg); line-height: 1.05; }
+.profile-card-gone { filter: grayscale(1); box-shadow: var(--sh-gone); }
+
+/* ===================== BOARD FILTER + SORT (B9) ======================== */
+.board-filter { display: flex; align-items: flex-start; gap: var(--s-4); flex-wrap: wrap; margin-bottom: var(--s-4); }
+.board-filter-cat { position: relative; }
+.board-filter-search input { width: 220px; }
+.board-filter-hits { position: absolute; z-index: 5; top: 100%; left: 0; right: 0; margin-top: var(--s-1); list-style: none; background: var(--hall); border: 1px solid var(--hairline); border-radius: var(--r-field); box-shadow: var(--sh-tile); max-height: 260px; overflow-y: auto; }
+.board-filter-hit { display: block; width: 100%; text-align: left; background: none; border: none; padding: var(--s-2) var(--s-3); font: inherit; cursor: pointer; }
+.board-filter-hit:hover { background: var(--hall-sunk); }
+.board-filter-chip { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-1) var(--s-3); border: 1px solid var(--signal); color: var(--signal); border-radius: var(--r-pill); }
+.board-filter-clear { background: none; border: none; color: inherit; cursor: pointer; font-size: var(--t-md); line-height: 1; padding: 0; }
+.board-filter-sort { display: inline-flex; align-items: center; gap: var(--s-2); }
+.board-filter-sort select { padding: var(--s-1) var(--s-3); border: 1px solid var(--hairline); border-radius: var(--r-field); background: var(--hall); font-family: var(--font-ui); }
+
+/* ===================== NOTIFICATIONS (B2 / B3) ======================== */
+.notif-prefs { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.notif-toggle { display: inline-flex; align-items: center; gap: var(--s-2); }
+.notif-toggle input, .notif-digest select { accent-color: var(--signal); }
+.notif-digest { display: inline-flex; align-items: center; gap: var(--s-2); }
+.notif-digest select { padding: var(--s-1) var(--s-2); border: 1px solid var(--hairline); border-radius: var(--r-field); background: var(--hall); }
+.notif-list { list-style: none; display: flex; flex-direction: column; gap: 2px; margin-top: var(--s-2); }
+.notif { display: flex; align-items: baseline; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--hairline); }
+.notif[data-unread="true"] .notif-kind { color: var(--signal); }
+.notif-kind { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey); min-width: 96px; }
+.notif-summary { flex: 1; font-size: var(--t-sm); }
+.notif-time { font-size: var(--t-xs); }

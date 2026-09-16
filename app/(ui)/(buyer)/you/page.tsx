@@ -8,6 +8,7 @@ import { AddressManager } from "./AddressManager";
 import { FollowingList } from "./FollowingList";
 import { PhoneSection } from "./PhoneSection";
 import { PushOptIn } from "./PushOptIn";
+import { Notifications } from "./Notifications";
 
 interface Me { user_number: string; handle: string; full_name: string; phone: string; phone_verified: boolean; badges: { slug: string; label: string }[] }
 interface Clout { tier: number; percentile: number | null; decayed_score: number; recent_events: { source: string; points: number }[] }
@@ -56,6 +57,8 @@ function You() {
       <PhoneSection phone={me.phone} verified={me.phone_verified} />
 
       <PushOptIn />
+
+      <Notifications />
 
       <div>
         <p className="you-panel-label muted">Account number</p>

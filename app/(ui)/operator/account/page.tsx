@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { useOperator } from "../_lib/shell";
 import { Paywall, type AllowanceDetails } from "../_lib/Paywall";
+import { LocationRow, type OpLocation } from "./LocationRow";
 
 /**
  * Account and billing (API-CONTRACT §10). Limits are the org's stored values,
@@ -19,7 +20,7 @@ interface Billing {
   active_locations: number;
   cycle: { start: string; end: string };
 }
-interface Location { id: string; name: string; city: string; region: string; line1: string }
+type Location = OpLocation;
 
 const tierName = (t: string) => t.replace(/^local_/, "").replace(/\b\w/g, (c) => c.toUpperCase());
 const date = (iso: string) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
@@ -110,10 +111,7 @@ export default function AccountPage() {
 
         <ul className="op-loc-list">
           {locations.map((l) => (
-            <li key={l.id} className="op-loc">
-              <span className="op-loc-name">{l.name}</span>
-              <span className="muted">{l.line1}, {l.city}, {l.region}</span>
-            </li>
+            <LocationRow key={l.id} loc={l} onChanged={() => void load()} />
           ))}
           {locations.length === 0 && <li className="op-empty">No locations yet.</li>}
         </ul>

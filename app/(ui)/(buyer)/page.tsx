@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 import { DropCard, type BoardCard } from "@/components/DropCard";
+import { BoardFilter, type BoardSort } from "@/app/(ui)/(buyer)/_lib/BoardFilter";
 
 interface Lane { on_fire: BoardCard[]; new: BoardCard[]; gone: BoardCard[] }
 interface Board { local: Lane; maker: Lane; digital: Lane }
@@ -29,22 +30,32 @@ function BoardView() {
   const [board, setBoard] = useState<Board | null>(null);
   const [cold, setCold] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tag, setTag] = useState<{ id: string; label: string } | null>(null);
+  const [sort, setSort] = useState<BoardSort>("heat");
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const r = await api<Board>("/v1/board");
+      const params = new URLSearchParams();
+      if (tag) params.set("tag_id", tag.id);
+      if (sort) params.set("sort", sort);
+      const qs = params.toString();
+      const r = await api<Board>(`/v1/board${qs ? `?${qs}` : ""}`);
       if (!alive) return;
-      if (r.ok && r.data) { setBoard(r.data); setCold(Boolean(r.meta?.cold_start)); }
+      if (r.ok && r.data) { setBoard(r.data); setCold(Boolean(r.meta?.cold_start)); setError(null); }
       else setError(r.error?.message ?? "The board could not load.");
     };
     load();
     const t = setInterval(load, 30_000); // refresh; Gone cards leave after 5 min
     return () => { alive = false; clearInterval(t); };
-  }, []);
+  }, [tag, sort]);
 
-  if (error) return <div className="board-hall"><p className="board-empty">{error}</p></div>;
-  if (!board) return <div className="board-hall"><p className="board-empty">Loading the board.</p></div>;
+  const filter = (
+    <BoardFilter tag={tag} sort={sort} onPickTag={setTag} onClearTag={() => setTag(null)} onSort={setSort} />
+  );
+
+  if (error) return <div className="board-hall"><div className="board-head"><h1 className="board-title">The board</h1></div>{filter}<p className="board-empty">{error}</p></div>;
+  if (!board) return <div className="board-hall"><div className="board-head"><h1 className="board-title">The board</h1></div>{filter}<p className="board-empty">Loading the board.</p></div>;
 
   const local = board.local;
   const onFire = local.on_fire;
@@ -59,7 +70,9 @@ function BoardView() {
         {cold && <span className="muted">New market. Sorted by distance.</span>}
       </div>
 
-      {nothing && <p className="board-empty">No live drops nearby right now.</p>}
+      {filter}
+
+      {nothing && <p className="board-empty">{tag ? `No live ${tag.label} drops nearby right now.` : "No live drops nearby right now."}</p>}
 
       {onFire.length > 0 && (
         <>

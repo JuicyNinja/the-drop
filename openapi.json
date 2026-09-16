@@ -4398,6 +4398,166 @@
         ],
         "additionalProperties": false
       },
+      "getOrgProfileResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "org_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "lane": {
+                "type": "string"
+              },
+              "redemption_rate": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "locations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "city": {
+                      "type": "string"
+                    },
+                    "region": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "city",
+                    "region"
+                  ]
+                }
+              },
+              "live": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "quantity_total": {
+                      "type": "number"
+                    },
+                    "quantity_remaining": {
+                      "type": "number"
+                    },
+                    "pct_remaining": {
+                      "type": "number"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "redeem_until": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "gone_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "quantity_total",
+                    "quantity_remaining",
+                    "pct_remaining",
+                    "status",
+                    "redeem_until",
+                    "gone_at"
+                  ]
+                }
+              },
+              "gone": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "quantity_total": {
+                      "type": "number"
+                    },
+                    "quantity_remaining": {
+                      "type": "number"
+                    },
+                    "pct_remaining": {
+                      "type": "number"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "redeem_until": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "gone_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "quantity_total",
+                    "quantity_remaining",
+                    "pct_remaining",
+                    "status",
+                    "redeem_until",
+                    "gone_at"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "org_id",
+              "name",
+              "lane",
+              "redemption_rate",
+              "locations",
+              "live",
+              "gone"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
       "getOrgResponse": {
         "type": "object",
         "properties": {
@@ -13273,6 +13433,96 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/profile": {
+      "get": {
+        "operationId": "getOrgProfile",
+        "summary": "Public business profile (live + Gone drops)",
+        "tags": [
+          "Merchant"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getOrgProfileResponse"
                 }
               }
             }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, getSession } from "@/app/(ui)/_lib/api";
@@ -116,7 +117,7 @@ export default function DropPage() {
         <p className="body">{drop.description}</p>
         {drop.terms && <p className="muted">{drop.terms}</p>}
         <dl className="detail-facts">
-          <div><dt>Merchant</dt><dd>{drop.merchant.name}</dd></div>
+          <div><dt>Merchant</dt><dd><Link href={`/merchants/${drop.merchant.org_id}`} className="inline-link">{drop.merchant.name}</Link></dd></div>
           {drop.merchant.location && <div><dt>Where</dt><dd>{drop.merchant.location.name}, {drop.merchant.location.city}</dd></div>}
           {drop.merchant.redemption_rate !== null && <div><dt>Redeemed</dt><dd className="data">{Math.round((drop.merchant.redemption_rate ?? 0) * 100)}%</dd></div>}
         </dl>

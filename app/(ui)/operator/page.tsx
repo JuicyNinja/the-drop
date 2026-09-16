@@ -1,8 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/(ui)/_lib/api";
+import { api, getSession } from "@/app/(ui)/_lib/api";
 import { useOperator } from "./_lib/shell";
+
+/** Fetch the authed code-sheet PDF and open it (a plain link cannot carry the
+ *  bearer token). O5 — the printable counter card. */
+async function openCodeSheet(locId: string): Promise<string | null> {
+  const s = getSession();
+  if (!s) return "Sign in again to print.";
+  const res = await fetch(`/v1/locations/${locId}/code-sheet.pdf`, {
+    headers: { authorization: `Bearer ${s.access_token}`, "x-client": "web", "x-client-version": "1.0.0" },
+  });
+  if (!res.ok) return "Could not build the code sheet.";
+  const url = URL.createObjectURL(await res.blob());
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return null;
+}
 
 /**
  * Today dashboard (DESIGN-SYSTEM §9): today's codes rendered large on --board so
@@ -28,6 +43,7 @@ export default function TodayPage() {
   const [selectedLocId, setSelectedLocId] = useState<string>("");
   const locId = org.locations.some((l) => l.id === selectedLocId) ? selectedLocId : (org.locations[0]?.id ?? "");
   const [data, setData] = useState<TodayData | null>(null);
+  const [sheetErr, setSheetErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!locId) return; // no location: nothing to fetch
@@ -45,15 +61,19 @@ export default function TodayPage() {
     <div className="op-page stack">
       <div className="op-page-head">
         <h1 className="op-title">Today</h1>
-        {org.locations.length > 1 && (
-          <label className="op-inline-field">
-            <span className="op-switcher-label">Location</span>
-            <select value={locId} onChange={(e) => setSelectedLocId(e.target.value)} aria-label="Location">
-              {org.locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </label>
-        )}
+        <div className="op-inline-field">
+          {org.locations.length > 1 && (
+            <label className="op-inline-field">
+              <span className="op-switcher-label">Location</span>
+              <select value={locId} onChange={(e) => setSelectedLocId(e.target.value)} aria-label="Location">
+                {org.locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </label>
+          )}
+          {locId && <button className="btn-secondary" onClick={async () => setSheetErr(await openCodeSheet(locId))}>Print code sheet</button>}
+        </div>
       </div>
+      {sheetErr && <p className="field-error">{sheetErr}</p>}
 
       {org.locations.length === 0 && <p className="op-empty">No locations yet. Add one from Account.</p>}
 
