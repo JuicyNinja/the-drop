@@ -2,23 +2,34 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { api, devSignIn, getSession } from "@/app/(ui)/_lib/api";
+import { PhoneVerify } from "@/app/(ui)/(buyer)/_lib/PhoneVerify";
 
-interface Me { registration_complete?: boolean }
+interface Me { registration_complete?: boolean; phone_verified?: boolean }
+
+/** Best-effort E.164 for a US number: 10 digits → +1XXXXXXXXXX. */
+function toE164(raw: string): string {
+  const digits = raw.replace(/[^\d+]/g, "");
+  if (digits.startsWith("+")) return digits;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return digits;
+}
 
 /**
- * Session gate for authed buyer surfaces. Reaches the product only through /v1.
- * A signed-out visitor gets a dev sign-in (production swaps in the real OAuth
- * redirect); a new account completes registration inline, then grants location.
- * Copy states facts, no urgency, no scaffolding.
+ * Session gate for authed surfaces. Reaches the product only through /v1. A
+ * signed-out visitor gets a dev sign-in (production swaps in the real OAuth
+ * redirect); a new account completes registration, then verifies its phone
+ * (PRD §3.4 — SMS-verified accounts), then grants location.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const [phase, setPhase] = useState<"loading" | "signin" | "register" | "ready">("loading");
+  const [phase, setPhase] = useState<"loading" | "signin" | "register" | "verify" | "ready">("loading");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // registration fields
   const [fullName, setFullName] = useState("");
   const [handle, setHandle] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -46,14 +57,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
       body: {
         full_name: fullName.trim(),
         handle: handle.trim().toLowerCase(),
-        phone: `+1801${Math.floor(1000000 + Math.random() * 8999999)}`,
+        phone: toE164(phone),
         address: { label: "Home", line1: "1 S Main St", city: "Salt Lake City", region: "UT", postal_code: "84101" },
       },
     });
     if (!reg.ok) { setBusy(false); setErr(reg.error?.message ?? "Could not complete registration."); return; }
     await api("/v1/users/me/location-permission", { method: "POST", body: { granted: true } });
     setBusy(false);
-    setPhase("ready");
+    setPhase("verify");
   }
 
   if (phase === "ready") return <>{children}</>;
@@ -62,7 +73,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return (
     <div className="page">
       <div className="auth-card stack">
-        {phase === "signin" ? (
+        {phase === "signin" && (
           <form className="stack" onSubmit={onSignIn}>
             <h1 className="auth-title">Sign in</h1>
             <p className="muted">Enter your email to continue.</p>
@@ -73,7 +84,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
             {err && <p className="field-error">{err}</p>}
             <button className="btn-catch" disabled={busy || !email} type="submit">Continue</button>
           </form>
-        ) : (
+        )}
+
+        {phase === "register" && (
           <form className="stack" onSubmit={onRegister}>
             <h1 className="auth-title">Finish your account</h1>
             <div>
@@ -84,9 +97,20 @@ export function RequireAuth({ children }: { children: ReactNode }) {
               <label htmlFor="handle">Handle</label>
               <input id="handle" value={handle} onChange={(e) => setHandle(e.target.value)} required />
             </div>
+            <div>
+              <label htmlFor="phone">Mobile number</label>
+              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(801) 555-0100" autoComplete="tel" required />
+            </div>
             {err && <p className="field-error">{err}</p>}
-            <button className="btn-catch" disabled={busy || !fullName || !handle} type="submit">Create account</button>
+            <button className="btn-catch" disabled={busy || !fullName || !handle || !phone} type="submit">Create account</button>
           </form>
+        )}
+
+        {phase === "verify" && (
+          <div className="stack">
+            <h1 className="auth-title">Verify your number</h1>
+            <PhoneVerify onVerified={() => setPhase("ready")} onSkip={() => setPhase("ready")} />
+          </div>
         )}
       </div>
     </div>

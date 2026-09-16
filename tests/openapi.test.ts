@@ -93,6 +93,7 @@ describe("openapi.json (the native contract)", () => {
       "/v1/orgs/{id}/staff",
       "/v1/orgs/{id}/subscription/upgrade",
       "/v1/orgs/{id}/whispers",
+      "/v1/push/vapid-key",
       "/v1/ready",
       "/v1/redemptions",
       "/v1/shares",

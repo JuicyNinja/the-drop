@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Keypad } from "@/components/Keypad";
+import { WhisperForm } from "@/app/(ui)/(buyer)/_lib/WhisperForm";
 
 interface Catch { id: string; status: string; position_number: number; drop: { id: string; title: string } }
 
@@ -23,10 +24,13 @@ function getGps(): Promise<Gps> {
   });
 }
 
+interface Redeemed { redemption_id: string; clout_earned: number }
+
 function Redeem() {
   const [catches, setCatches] = useState<Catch[]>([]);
   const [pick, setPick] = useState<Catch | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [done, setDone] = useState<Redeemed | null>(null);
+  const [whispered, setWhispered] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -36,17 +40,39 @@ function Redeem() {
     if (!pick || busy) return;
     setBusy(true); setError(null);
     const gps = await getGps();
-    const r = await api<{ redeemed: boolean; clout_earned: number }>("/v1/redemptions", {
+    const r = await api<Redeemed & { redeemed: boolean }>("/v1/redemptions", {
       method: "POST",
       body: { catch_id: pick.id, code, ...gps },
       idem: (crypto as Crypto).randomUUID(),
     });
     setBusy(false);
-    if (r.ok && r.data) { setResult(`Redeemed. You earned ${r.data.clout_earned} clout.`); return; }
+    if (r.ok && r.data) { setDone({ redemption_id: r.data.redemption_id, clout_earned: r.data.clout_earned }); return; }
     setError(r.error?.code === "LOCATION_PERMISSION_REQUIRED" ? "Turn on location to redeem." : (r.error?.message ?? "That code didn't work."));
   }
 
-  if (result) return <div className="page"><div className="redeem-sheet"><p className="display redeem-done">{result}</p><a className="btn-secondary" href="/wallet">Called It</a></div></div>;
+  // Success: confirm the redemption, then invite a whisper (§10.5) — one of the
+  // three clout sources and the merchant-score input.
+  if (done) {
+    return (
+      <div className="page">
+        <div className="redeem-sheet stack">
+          <p className="display redeem-done">Redeemed. You earned {done.clout_earned} clout.</p>
+          {whispered !== null ? (
+            <>
+              <p className="muted">Thanks for the whisper{whispered > 0 ? ` — +${whispered} clout.` : "."}</p>
+              <a className="btn-secondary" href="/wallet">Called It</a>
+            </>
+          ) : (
+            <>
+              <p className="you-panel-label muted">Leave a whisper</p>
+              <WhisperForm redemptionId={done.redemption_id} onDone={(c) => setWhispered(c)} />
+              <a className="op-link" href="/wallet">Skip</a>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (!pick) {
     return (

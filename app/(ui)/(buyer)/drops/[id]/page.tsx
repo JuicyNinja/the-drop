@@ -7,6 +7,7 @@ import { Pips } from "@/components/Pips";
 import { LogoBubble } from "@/components/LogoBubble";
 import { SplitFlap } from "@/components/SplitFlap";
 import { GoneStamp } from "@/components/GoneStamp";
+import { FollowButton } from "@/app/(ui)/(buyer)/_lib/FollowButton";
 
 interface PublicDrop {
   id: string; lane: string; title: string; description: string; terms: string | null;
@@ -118,6 +119,8 @@ export default function DropPage() {
           {drop.merchant.location && <div><dt>Where</dt><dd>{drop.merchant.location.name}, {drop.merchant.location.city}</dd></div>}
           {drop.merchant.redemption_rate !== null && <div><dt>Redeemed</dt><dd className="data">{Math.round((drop.merchant.redemption_rate ?? 0) * 100)}%</dd></div>}
         </dl>
+
+        <FollowButton orgId={drop.merchant.org_id} />
 
         {!gone && (
           <div className="position-hint">

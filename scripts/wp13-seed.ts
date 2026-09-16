@@ -19,7 +19,11 @@ const iso = (ms: number) => new Date(Date.now() + ms).toISOString();
 async function main(): Promise<void> {
   const pg = new Client({ connectionString: DB });
   await pg.connect();
-  const stamp = Date.now();
+
+  // Deterministic dev accounts so a human can sign in (dev sign-in is
+  // passwordless: enter the email on the sign-in screen).
+  const OWNER_EMAIL = "owner@thedrop.test";
+  const BUYER_EMAIL = "buyer@thedrop.test";
 
   const admin = (await api("/v1/auth/oauth/callback", { method: "POST", body: { code: "dev-code:info@juicyninja.com", state: (await api("/v1/auth/oauth/start", { method: "POST", body: { provider: "google", return_to: "/" } })).data.state } })).data.session.access_token;
 
@@ -31,7 +35,7 @@ async function main(): Promise<void> {
     return token;
   }
 
-  const owner = await register(`seedown_${stamp}@t.test`, `seedo${stamp % 100000}`);
+  const owner = await register(OWNER_EMAIL, "maxwells");
   const orgId = (await api("/v1/orgs", { method: "POST", token: owner, body: { name: "Maxwell's", tier: "local_superstar" } })).data?.id
     ?? (await api("/v1/orgs", { token: owner })).data?.[0]?.org_id;
   const loc = (await api(`/v1/orgs/${orgId}/locations`, { method: "POST", token: owner, body: { name: "Maxwell's on Main", line1: "1 Main", city: "Salt Lake City", region: "UT", postal_code: "84101", geofence_radius_m: 150 } })).data.id;
@@ -62,7 +66,15 @@ async function main(): Promise<void> {
   await pg.query(`update drops set status='gone', gone_at=now(), quantity_remaining=0 where id=$1`, [goneId]);
 
   await api("/v1/admin/scheduler/tick", { method: "POST", token: admin }); // pressure
+
+  // A buyer to sign in as. register() gives them a Salt Lake City home address
+  // and location permission, so the SLC board and catching work immediately.
+  await register(BUYER_EMAIL, "adabuyer");
+
   await pg.end();
   console.log(`Seeded Salt Lake City board: ${offers.length} live + 1 gone. Org ${orgId}.`);
+  console.log(`\nDev sign-in is passwordless — type the email on the sign-in screen:`);
+  console.log(`  Merchant owner : ${OWNER_EMAIL}   (owns Maxwell's; open /operator)`);
+  console.log(`  Buyer          : ${BUYER_EMAIL}    (browse the board; open /)`);
 }
 main().catch((e) => { console.error(e instanceof Error ? e.stack : e); process.exit(1); });

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Scoreboard } from "./Scoreboard";
+import { CreateOrgForm } from "./CreateOrgForm";
 
 /**
  * The operator shell (DESIGN-SYSTEM §9): the persistent scoreboard top-right on
@@ -30,6 +31,7 @@ interface OperatorCtx {
   memberships: Membership[];
   org: Membership;
   setOrg: (orgId: string) => void;
+  reload: (selectOrgId?: string) => Promise<void>;
 }
 
 const Ctx = createContext<OperatorCtx | null>(null);
@@ -62,6 +64,18 @@ function Portal({ children }: { children: ReactNode }) {
   const [memberships, setMemberships] = useState<Membership[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const reload = useCallback(async (selectOrgId?: string) => {
+    const r = await api<Membership[]>("/v1/orgs");
+    const list = r.ok && r.data ? r.data : [];
+    setMemberships(list);
+    setSelectedId((current) => {
+      const want = selectOrgId ?? current ?? readSelected();
+      const picked = list.find((m) => m.org_id === want) ?? list[0];
+      if (picked && selectOrgId) { try { localStorage.setItem(SELECTED_KEY, picked.org_id); } catch { /* ignore */ } }
+      return picked?.org_id ?? null;
+    });
+  }, []);
+
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -82,28 +96,35 @@ function Portal({ children }: { children: ReactNode }) {
   }
 
   if (memberships === null) return <div className="page muted">Loading.</div>;
+
+  // Self-onboarding: an account with no business creates its first one here.
   if (memberships.length === 0) {
     return (
-      <div className="page">
-        <div className="auth-card stack">
-          <h1 className="auth-title">No merchant access</h1>
-          <p className="muted">This account is not attached to a business. The board is at <Link href="/" className="inline-link">The Drop</Link>.</p>
-        </div>
+      <div className="op">
+        <header className="op-bar"><div className="op-bar-left"><Link href="/operator" className="nav-brand">The Drop · Operator</Link></div></header>
+        <main className="op-main op-form-page">
+          <div className="stack">
+            <h1 className="op-title">Create your business</h1>
+            <p className="muted">Set up your business to start dropping. The board is at <Link href="/" className="inline-link">The Drop</Link>.</p>
+            <CreateOrgForm onCreated={(id) => { void reload(id); }} />
+          </div>
+        </main>
       </div>
     );
   }
 
   const org = memberships.find((m) => m.org_id === selectedId) ?? memberships[0];
   return (
-    <Ctx.Provider value={{ memberships, org, setOrg }}>
+    <Ctx.Provider value={{ memberships, org, setOrg, reload }}>
       <OperatorChrome>{children}</OperatorChrome>
     </Ctx.Provider>
   );
 }
 
 function OperatorChrome({ children }: { children: ReactNode }) {
-  const { memberships, org, setOrg } = useOperator();
+  const { memberships, org, setOrg, reload } = useOperator();
   const path = usePathname();
+  const [adding, setAdding] = useState(false);
   return (
     <div className="op">
       <header className="op-bar">
@@ -121,6 +142,7 @@ function OperatorChrome({ children }: { children: ReactNode }) {
           ) : (
             <span className="op-current" aria-label="Current business">{org.name}</span>
           )}
+          <button className="op-nav-link op-add-business" onClick={() => setAdding(true)}>+ Add business</button>
           <nav className="op-nav">
             {NAV.map((n) => {
               const active = n.href === "/operator" ? path === "/operator" : path.startsWith(n.href);
@@ -132,7 +154,14 @@ function OperatorChrome({ children }: { children: ReactNode }) {
         </div>
         <Scoreboard orgId={org.org_id} />
       </header>
-      <main className="op-main">{children}</main>
+      <main className="op-main">
+        {adding ? (
+          <div className="op-page op-form-page stack">
+            <h1 className="op-title">Add a business</h1>
+            <CreateOrgForm onCreated={(id) => { setAdding(false); void reload(id); }} onCancel={() => setAdding(false)} />
+          </div>
+        ) : children}
+      </main>
     </div>
   );
 }

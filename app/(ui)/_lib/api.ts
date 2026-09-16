@@ -24,10 +24,20 @@ export function getSession(): Session | null {
     return null;
   }
 }
+/** Fired whenever the stored session changes (sign-in, refresh, sign-out), so
+ *  in-tab listeners can react — the localStorage `storage` event does not fire
+ *  in the same tab that made the change. */
+export const SESSION_EVENT = "thedrop:session";
+
 function setSession(s: Session | null): void {
   try {
     if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     else localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EVENT));
   } catch {
     /* ignore */
   }

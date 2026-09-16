@@ -522,3 +522,79 @@
   height: 1px;
   background: var(--board-deep);
 }
+
+/* ===================== ACTIVE-ADDRESS INDICATOR (PRD §8.1) ============== */
+.active-address-link { display: inline-flex; text-decoration: none; }
+.active-address {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  background: var(--hall-sunk);
+  font-size: var(--t-sm);
+  white-space: nowrap;
+}
+.active-address-dot { align-self: center; width: 7px; height: 7px; border-radius: var(--r-pill); background: var(--signal); flex: none; }
+.active-address-label { color: var(--ink); font-weight: 500; }
+.active-address-city { color: var(--grey); font-size: var(--t-xs); }
+
+/* ===================== ADDRESS MANAGER (WP-4 / PRD §8) ================== */
+.addr-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.addr-add { white-space: nowrap; }
+.addr-drift {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap;
+  background: var(--board); color: var(--on-board);
+  border-radius: var(--r-tile); padding: var(--s-3) var(--s-4);
+}
+.addr-drift-btn { flex: none; }
+.addr-list { list-style: none; display: flex; flex-direction: column; gap: var(--s-3); }
+.addr {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4);
+  padding: var(--s-4); border: 1px solid var(--hairline); border-radius: var(--r-tile);
+}
+.addr[data-active="true"] { border-color: var(--signal); box-shadow: inset 3px 0 0 var(--signal); }
+.addr-body { display: flex; flex-direction: column; gap: 2px; }
+.addr-line { display: flex; align-items: center; gap: var(--s-2); }
+.addr-label { font-weight: 500; color: var(--ink); }
+.addr-tag { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 0 var(--s-2); }
+.addr-tag-active { color: var(--signal); border-color: var(--signal); }
+.addr-formatted { font-size: var(--t-sm); }
+.addr-radius { font-size: var(--t-xs); }
+.addr-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; flex: none; }
+.addr-form { border: 1px solid var(--hairline); border-radius: var(--r-tile); padding: var(--s-4); background: var(--hall-sunk); }
+.addr-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--s-3); }
+.addr-form input[type="range"] { width: 100%; accent-color: var(--signal); }
+
+/* ===================== FOLLOW / FANATIC (B5) =========================== */
+.card-wrap-outer { display: flex; flex-direction: column; gap: var(--s-2); }
+.card-follow { display: flex; justify-content: center; }
+.follow-pill {
+  font-size: var(--t-sm); color: var(--grey);
+  border: 1px solid var(--hairline); border-radius: var(--r-pill);
+  padding: var(--s-1) var(--s-3); background: var(--hall);
+}
+.follow-pill[data-following="true"] { color: var(--signal); border-color: var(--signal); }
+.follow-full { margin: var(--s-2) 0; }
+.follow-manage { align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.follow-state { font-weight: 500; color: var(--ink); }
+.follow-note { font-size: var(--t-sm); }
+.following-list { list-style: none; display: flex; flex-direction: column; gap: var(--s-2); }
+.following { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.following-name { font-weight: 500; flex: 1; }
+.following-tier { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 0 var(--s-2); }
+.following-tier[data-fanatic="true"] { color: var(--signal); border-color: var(--signal); }
+.following-actions { display: flex; gap: var(--s-3); }
+
+/* ===================== WHISPER FORM (B1) =============================== */
+.whisper-form { border: 1px solid var(--hairline); border-radius: var(--r-tile); padding: var(--s-4); background: var(--hall-sunk); }
+.whisper-anchor { font-family: var(--font-display); font-weight: 700; font-size: var(--t-md); }
+.whisper-form input[type="range"] { width: 100%; accent-color: var(--signal); }
+.btn-secondary[data-selected="true"] { border-color: var(--signal); color: var(--signal); box-shadow: inset 0 0 0 1px var(--signal); }
+
+/* ===================== PHONE VERIFY + PUSH (B6, B4) ==================== */
+.phone-verify { border: 1px solid var(--hairline); border-radius: var(--r-tile); padding: var(--s-4); background: var(--hall-sunk); }
+.you-phone { display: flex; align-items: baseline; gap: var(--s-3); }
+.phone-verified { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--signal); }
+.phone-unverified { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey); }

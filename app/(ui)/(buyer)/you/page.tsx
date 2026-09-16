@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, clearSession } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
+import { AddressManager } from "./AddressManager";
+import { FollowingList } from "./FollowingList";
+import { PhoneSection } from "./PhoneSection";
+import { PushOptIn } from "./PushOptIn";
 
-interface Me { user_number: string; handle: string; full_name: string; badges: { slug: string; label: string }[] }
+interface Me { user_number: string; handle: string; full_name: string; phone: string; phone_verified: boolean; badges: { slug: string; label: string }[] }
 interface Clout { tier: number; percentile: number | null; decayed_score: number; recent_events: { source: string; points: number }[] }
 
 function pad14(n: string): string { return n.padStart(14, "0"); }
@@ -44,6 +48,14 @@ function You() {
           <div className="row you-badges">{me.badges.map((b) => <span key={b.slug} className="badge">{b.label}</span>)}</div>
         )}
       </div>
+
+      <FollowingList />
+
+      <AddressManager />
+
+      <PhoneSection phone={me.phone} verified={me.phone_verified} />
+
+      <PushOptIn />
 
       <div>
         <p className="you-panel-label muted">Account number</p>

@@ -6,6 +6,7 @@ import { Pips } from "./Pips";
 import { LogoBubble } from "./LogoBubble";
 import { GoneStamp } from "./GoneStamp";
 import { SplitFlap } from "./SplitFlap";
+import { FollowButton } from "@/app/(ui)/(buyer)/_lib/FollowButton";
 
 export interface BoardCard {
   id: string;
@@ -111,8 +112,15 @@ export function DropCard({ card, freshArrival = false }: { card: BoardCard; fres
 
   if (gone) return <div className="card-wrap card-wrap-gone">{inner}</div>;
   return (
-    <Link href={`/drops/${card.id}`} className="card-wrap">
-      {inner}
-    </Link>
+    <div className="card-wrap-outer">
+      <Link href={`/drops/${card.id}`} className="card-wrap">
+        {inner}
+      </Link>
+      {/* Follow the merchant from the board, without disturbing the fixed card
+          composition (§4) — the pill sits beneath the card. */}
+      <div className="card-follow">
+        <FollowButton orgId={card.merchant.org_id} variant="compact" />
+      </div>
+    </div>
   );
 }

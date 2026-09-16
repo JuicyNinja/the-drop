@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ActiveAddressIndicator } from "@/app/(ui)/(buyer)/_lib/buyer";
 
 /** Buyer nav tabs (DESIGN-SYSTEM §10 / PRD §12). Sentence case, no arrows. */
 const TABS = [
@@ -26,6 +27,10 @@ export function Nav() {
             </Link>
           );
         })}
+        {/* Persistent active-market indicator (PRD §8.1): links to address management. */}
+        <Link href="/you" className="active-address-link" aria-label="Active address">
+          <ActiveAddressIndicator />
+        </Link>
       </div>
     </nav>
   );
