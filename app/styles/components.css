@@ -635,3 +635,32 @@
 .notif-kind { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey); min-width: 96px; }
 .notif-summary { flex: 1; font-size: var(--t-sm); }
 .notif-time { font-size: var(--t-xs); }
+
+/* ===================== HANDLE AVAILABILITY (B10) ====================== */
+.handle-hint { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; margin: var(--s-1) 0 0; }
+.handle-hint-ok { color: var(--signal); }
+.handle-hint-bad { color: var(--oxide); }
+.handle-hint-muted { color: var(--grey); }
+
+/* ===================== EDIT PROFILE (B7) ============================== */
+.you-edit-open { margin-top: var(--s-2); }
+.you-edit { margin-top: var(--s-3); }
+.you-handle-locked { font-size: var(--t-lg); }
+.you-handle-note { font-size: var(--t-xs); margin: var(--s-1) 0 0; }
+
+/* ===================== CLOUT LEDGER (B11) ============================= */
+.clout-ledger { list-style: none; display: flex; flex-direction: column; gap: 2px; margin-top: var(--s-3); }
+.clout-row { display: flex; align-items: baseline; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--hairline); }
+.clout-source { flex: 1; font-size: var(--t-sm); }
+.clout-points { color: var(--signal); }
+.clout-when { font-size: var(--t-xs); }
+
+/* ===================== WALKTHROUGH (B8) ============================== */
+.wt-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--s-4); background: rgba(20, 16, 12, 0.55); }
+.wt-card { width: 100%; max-width: 420px; padding: var(--s-6); background: var(--hall); border: 1px solid var(--hairline); border-radius: var(--r-tile); box-shadow: var(--sh-lift); }
+.wt-dots { display: flex; gap: var(--s-2); }
+.wt-dot { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--hairline); }
+.wt-dot-on { background: var(--signal); }
+.wt-title { font-family: var(--font-display); font-weight: 800; font-size: var(--t-xl); line-height: 1.1; color: var(--ink); }
+.wt-body { font-size: var(--t-base); color: var(--grey); }
+.wt-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); margin-top: var(--s-2); }

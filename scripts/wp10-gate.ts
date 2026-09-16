@@ -37,11 +37,11 @@ async function session(email: string): Promise<string> {
   const c = await api("/v1/auth/oauth/callback", { method: "POST", body: { code: `dev-code:${email}`, state: s.body.data.state } });
   return c.body.data.session.access_token;
 }
-async function register(email: string, handle: string): Promise<{ token: string; uid: string }> {
+async function register(email: string, handle: string): Promise<{ token: string; uid: string; handle: string }> {
   const token = await session(email);
   await api("/v1/auth/register/complete", { method: "POST", token, body: { full_name: `Name ${handle}`, handle, phone: `+1801${Math.floor(1000000 + Math.random() * 8999999)}`, address: { label: "Home", line1: "1 S Main St", city: "Salt Lake City", region: "UT", postal_code: "84101" } } });
   await api("/v1/users/me/location-permission", { method: "POST", token, body: { granted: true } });
-  return { token, uid: subOf(token) };
+  return { token, uid: subOf(token), handle };
 }
 
 /** Read a whisper AS a given user, through RLS (role authenticated + JWT sub). */
@@ -81,10 +81,13 @@ async function main(): Promise<void> {
   const A = await register(`w10a_${stamp}@t.test`, `w10a${stamp % 100000}`);
   const B = await register(`w10b_${stamp}@t.test`, `w10b${stamp % 100000}`);
   const S = await register(`w10s_${stamp}@t.test`, `w10s${stamp % 100000}`);
+  // Catching requires a verified phone since WP-3's gate (proven in wp3-gate);
+  // set it directly as a precondition for the accounts that catch here.
+  await pg.query(`update users set phone_verified_at = now() where id = any($1::uuid[])`, [[O1.uid, O2.uid, A.uid, B.uid, S.uid]]);
 
   const org1 = (await api("/v1/orgs", { method: "POST", token: O1.token, body: { name: "W10 Co1", tier: "local_superstar" } })).body.data.id;
   const loc1 = (await api(`/v1/orgs/${org1}/locations`, { method: "POST", token: O1.token, body: { name: "Shop1", line1: "1 Main", city: "Salt Lake City", region: "UT", postal_code: "84101", geofence_radius_m: 150 } })).body.data.id;
-  await api(`/v1/orgs/${org1}/staff`, { method: "POST", token: O1.token, body: { user_id: S.uid, location_id: loc1 } });
+  await api(`/v1/orgs/${org1}/staff`, { method: "POST", token: O1.token, body: { to_handle: S.handle, location_id: loc1 } });
   await pg.query(`update locations set lat=40.7608, lng=-111.891 where id=$1`, [loc1]);
   const org2 = (await api("/v1/orgs", { method: "POST", token: O2.token, body: { name: "W10 Co2", tier: "local_starter" } })).body.data.id;
 
@@ -142,7 +145,10 @@ async function main(): Promise<void> {
   const adminFiles = walk(path.join(root, "app", "api", "v1", "admin"));
   const adminGrant = adminFiles.filter(insertsCloutEvents).map((f) => path.relative(root, f));
   const cloutAdminRoutes = adminFiles.filter((f) => /clout/i.test(f)).map((f) => path.relative(root, f).replace(/\\/g, "/"));
-  check("no admin clout grant endpoint exists (admin clout route is recompute only, inserts no clout_events)", adminGrant.length === 0 && cloutAdminRoutes.every((f) => /recompute/.test(f)), `admin clout routes: ${cloutAdminRoutes.join(", ")}; grant-writers: ${adminGrant.join(", ") || "none"}`);
+  // The two legitimate admin clout operations are recompute (re-derives from the
+  // ledger) and freeze (halts future accrual). Neither grants: the substantive
+  // guard is that no admin file inserts clout_events at all (invariant #6).
+  check("no admin clout grant endpoint exists (admin clout routes are recompute/freeze only, insert no clout_events)", adminGrant.length === 0 && cloutAdminRoutes.every((f) => /recompute|freeze/.test(f)), `admin clout routes: ${cloutAdminRoutes.join(", ")}; grant-writers: ${adminGrant.join(", ") || "none"}`);
 
   // ========================================================================
   // GATE — tier 5 population never exceeds 1%; requirement 2 (small-N behavior).

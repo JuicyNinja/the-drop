@@ -34,14 +34,14 @@ async function sessionFor(email: string): Promise<string> {
   return cb.body.data.session.access_token as string;
 }
 
-async function register(email: string, handle: string): Promise<{ token: string; uid: string }> {
+async function register(email: string, handle: string): Promise<{ token: string; uid: string; handle: string }> {
   const token = await sessionFor(email);
   const reg = await api("/v1/auth/register/complete", {
     method: "POST", token,
     body: { full_name: "Gate", handle, phone: `+1801${Math.floor(1000000 + Math.random() * 8999999)}`, address: { label: "Home", line1: "1 S Main St", city: "Salt Lake City", region: "UT", postal_code: "84101" } },
   });
   if (reg.status !== 200) throw new Error(`register ${email}: ${JSON.stringify(reg.body)}`);
-  return { token, uid: subOf(token) };
+  return { token, uid: subOf(token), handle };
 }
 
 function currentCycle(anchorISO: string): { start: string; end: string } {
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
   const locResp = await api(`/v1/orgs/${orgA}/locations`, { method: "POST", token: owner.token, body: { name: "Shop", line1: "1 Main", city: "Salt Lake City", region: "UT", postal_code: "84101", geofence_radius_m: 200 } });
   const locA = locResp.body.data.id as string;
   check("location created, geocoded server-side, geofence stored", locResp.status === 201 && typeof locResp.body.data.lat === "number" && locResp.body.data.geofence_radius_m === 200, `${locResp.status} lat=${locResp.body.data?.lat} geofence=${locResp.body.data?.geofence_radius_m}`);
-  const addStaff = await api(`/v1/orgs/${orgA}/staff`, { method: "POST", token: owner.token, body: { user_id: staff.uid, location_id: locA } });
+  const addStaff = await api(`/v1/orgs/${orgA}/staff`, { method: "POST", token: owner.token, body: { to_handle: staff.handle, location_id: locA } });
   check("owner can add a staff seat scoped to a location", addStaff.status === 201, `${addStaff.status} ${JSON.stringify(addStaff.body.data ?? addStaff.body)}`);
 
   // seed a live drop under locA for the stats check
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   // ========================================================================
   // A valid body, so the role gate (requireOwner) is what's exercised — not body
   // validation. Drop creation is real since WP-6, so owner → 201 (a draft), not
-  // the WP-5-era 501 shell. Per-drop stats remains a WP-13 501 placeholder.
+  // the WP-5-era 501 shell. Per-drop stats is real since WP-13 (owner → 200).
   const validDrop = { location_id: locA, title: "Role Gate Drop", description: "d", quantity_total: 1 };
   const sDrop = await api("/v1/drops", { method: "POST", token: staff.token, body: validDrop });
   const sBilling = await api(`/v1/orgs/${orgA}/billing`, { token: staff.token });
@@ -96,11 +96,11 @@ async function main(): Promise<void> {
   check("1. staff → 403 on GET /v1/orgs/{id}/billing", sBilling.status === 403 && sBilling.body.error?.code === "FORBIDDEN", `${sBilling.status} ${JSON.stringify(sBilling.body.error ?? sBilling.body)}`);
   check("1. staff → 403 on GET /v1/drops/{id}/stats", sStats.status === 403 && sStats.body.error?.code === "FORBIDDEN", `${sStats.status} ${JSON.stringify(sStats.body.error ?? sStats.body)}`);
   // owner passes the role gate: drop creation is real (201 draft), billing is
-  // real (200), per-drop stats is still a WP-13 placeholder (501).
+  // real (200), and per-drop stats is real since WP-13 (200).
   const oDrop = await api("/v1/drops", { method: "POST", token: owner.token, body: validDrop });
   const oBilling = await api(`/v1/orgs/${orgA}/billing`, { token: owner.token });
   const oStats = await api(`/v1/drops/${dropId}/stats`, { token: owner.token });
-  check("1. owner passes: drop=201 (real draft), billing=200, stats=501 (WP-13 placeholder)", oDrop.status === 201 && oBilling.status === 200 && oStats.status === 501, `drop=${oDrop.status} billing=${oBilling.status} stats=${oStats.status}`);
+  check("1. owner passes: drop=201 (real draft), billing=200, stats=200 (real since WP-13)", oDrop.status === 201 && oBilling.status === 200 && oStats.status === 200, `drop=${oDrop.status} billing=${oBilling.status} stats=${oStats.status}`);
 
   // ========================================================================
   // GATE 2 — limits read from the org row, never the tier enum.

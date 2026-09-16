@@ -5,6 +5,7 @@ import { api } from "@/app/(ui)/_lib/api";
 import { useOperator } from "../_lib/shell";
 import { Paywall, type AllowanceDetails } from "../_lib/Paywall";
 import { LocationRow, type OpLocation } from "./LocationRow";
+import { StaffManager } from "./StaffManager";
 
 /**
  * Account and billing (API-CONTRACT §10). Limits are the org's stored values,
@@ -137,6 +138,11 @@ export default function AccountPage() {
           <Paywall orgId={org.org_id} message={paywall.message} details={paywall.details} onUpgraded={() => { setPaywall(null); void addLocation(); }} />
         )}
       </div>
+
+      {/* Staff seats are owner-managed; staff never see this (PRD §13.6). */}
+      {org.role === "merchant_owner" && (
+        <StaffManager orgId={org.org_id} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
+      )}
     </div>
   );
 }

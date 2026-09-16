@@ -120,6 +120,9 @@ async function main(): Promise<void> {
   const recipient = await register(`w14rcp_${stamp}@t.test`, `w14r${stamp % 100000}`);
   const senders = [] as { token: string; uid: string; handle: string }[];
   for (let i = 0; i < 3; i++) senders.push(await register(`w14s${i}_${stamp}@t.test`, `w14s${i}${stamp % 100000}`));
+  // Catching requires a verified phone since WP-3's gate (proven in wp3-gate);
+  // set it directly for the senders (who catch) and the recipient.
+  await pg.query(`update users set phone_verified_at = now() where id = any($1::uuid[])`, [[recipient.uid, ...senders.map((s) => s.uid)]]);
 
   let transferred = 0;
   for (const s of senders) {

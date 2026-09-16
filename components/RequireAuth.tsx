@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, devSignIn, getSession } from "@/app/(ui)/_lib/api";
 import { PhoneVerify } from "@/app/(ui)/(buyer)/_lib/PhoneVerify";
+import { useHandleAvailability, handleHint } from "@/app/(ui)/_lib/useHandleAvailability";
 
 interface Me { registration_complete?: boolean; phone_verified?: boolean }
 
@@ -30,6 +31,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const [fullName, setFullName] = useState("");
   const [handle, setHandle] = useState("");
   const [phone, setPhone] = useState("");
+  const handleStatus = useHandleAvailability(handle);
+  const handleTaken = handleStatus === "taken";
 
   useEffect(() => {
     (async () => {
@@ -95,14 +98,17 @@ export function RequireAuth({ children }: { children: ReactNode }) {
             </div>
             <div>
               <label htmlFor="handle">Handle</label>
-              <input id="handle" value={handle} onChange={(e) => setHandle(e.target.value)} required />
+              <input id="handle" value={handle} onChange={(e) => setHandle(e.target.value)} required aria-invalid={handleTaken} />
+              {handleHint(handleStatus) && (
+                <p className={`handle-hint handle-hint-${handleHint(handleStatus)!.tone}`}>{handleHint(handleStatus)!.text}</p>
+              )}
             </div>
             <div>
               <label htmlFor="phone">Mobile number</label>
               <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(801) 555-0100" autoComplete="tel" required />
             </div>
             {err && <p className="field-error">{err}</p>}
-            <button className="btn-catch" disabled={busy || !fullName || !handle || !phone} type="submit">Create account</button>
+            <button className="btn-catch" disabled={busy || !fullName || !handle || !phone || handleTaken} type="submit">Create account</button>
           </form>
         )}
 

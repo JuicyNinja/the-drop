@@ -6,6 +6,7 @@ import { resolveCityId } from "@/lib/cities";
 import { currentCycle } from "@/lib/billing/allowance";
 import { isSelfServeTier, seedLimitsFor, upgradeOptions } from "@/lib/billing/tiers";
 import { isAdmin } from "@/lib/auth/org-access";
+import { getUserByHandle } from "@/lib/users";
 import type { UserRecord } from "@/lib/users";
 
 /**
@@ -344,11 +345,13 @@ export async function deactivateLocation(locationId: string): Promise<void> {
 
 export interface StaffSeat {
   user_id: string;
+  handle: string;
+  display_name: string;
   location_id: string;
   granted_at: string;
 }
 
-export async function addStaff(orgId: string, grantedBy: string, userId: string, locationId: string): Promise<StaffSeat> {
+export async function addStaff(orgId: string, grantedBy: string, toHandle: string, locationId: string): Promise<StaffSeat> {
   // The location must belong to this org — a seat is scoped to one location.
   const loc = await getLocation(locationId);
   if (loc.org_id !== orgId) {
@@ -356,23 +359,45 @@ export async function addStaff(orgId: string, grantedBy: string, userId: string,
       body: [{ path: "location_id", message: "wrong org" }],
     });
   }
+  // Resolved on the handle, the platform's one recipient-identity primitive
+  // (the transfer send flow does the same). No client ever handles a user_id.
+  const recipient = await getUserByHandle(toHandle);
+  if (!recipient) {
+    throw new ApiError("NOT_FOUND", "No account with that handle.", { body: [{ path: "to_handle", message: "unknown" }] });
+  }
   const { error } = await getServiceClient()
     .from("user_roles")
-    .insert({ user_id: userId, role: "merchant_staff", org_id: orgId, location_id: locationId, granted_by: grantedBy });
+    .insert({ user_id: recipient.id, role: "merchant_staff", org_id: orgId, location_id: locationId, granted_by: grantedBy });
   if (error) {
-    if (error.code === "23505") throw new ApiError("VALIDATION_ERROR", "That user already has a role in this organization.");
+    if (error.code === "23505") throw new ApiError("VALIDATION_ERROR", "That account already has a role in this organization.");
     if (error.code === "23503") throw new ApiError("NOT_FOUND", "No such user.");
     throw new Error(`add staff failed: ${error.message}`);
   }
-  return { user_id: userId, location_id: locationId, granted_at: new Date().toISOString() };
+  return {
+    user_id: recipient.id, handle: recipient.handle, display_name: recipient.full_name,
+    location_id: locationId, granted_at: new Date().toISOString(),
+  };
 }
 
 export async function listStaff(orgId: string): Promise<StaffSeat[]> {
+  // Join the account leaf so the owner sees handles, not raw ids — the id is an
+  // internal handle no operator ever reads.
   const { data, error } = await getServiceClient()
     .from("user_roles")
-    .select("user_id, location_id, granted_at")
+    .select("user_id, location_id, granted_at, users:user_id(handle, full_name)")
     .eq("org_id", orgId)
-    .eq("role", "merchant_staff");
+    .eq("role", "merchant_staff")
+    .order("granted_at", { ascending: true });
   if (error) throw new Error(`list staff failed: ${error.message}`);
-  return (data ?? []) as StaffSeat[];
+  return (data ?? []).map((row) => {
+    const u = (row as { users: { handle: string; full_name: string } | { handle: string; full_name: string }[] | null }).users;
+    const acct = Array.isArray(u) ? u[0] : u;
+    return {
+      user_id: row.user_id as string,
+      handle: acct?.handle ?? "unknown",
+      display_name: acct?.full_name ?? "",
+      location_id: row.location_id as string,
+      granted_at: row.granted_at as string,
+    };
+  });
 }

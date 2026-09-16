@@ -28,11 +28,11 @@ async function session(email: string): Promise<string> {
   const c = await api("/v1/auth/oauth/callback", { method: "POST", body: { code: `dev-code:${email}`, state: s.body.data.state } });
   return c.body.data.session.access_token;
 }
-async function register(email: string, handle: string, grantLoc = true): Promise<{ token: string; uid: string }> {
+async function register(email: string, handle: string, grantLoc = true): Promise<{ token: string; uid: string; handle: string }> {
   const token = await session(email);
   await api("/v1/auth/register/complete", { method: "POST", token, body: { full_name: "U", handle, phone: `+1801${Math.floor(1000000 + Math.random() * 8999999)}`, address: { label: "Home", line1: "1 S Main St", city: "Salt Lake City", region: "UT", postal_code: "84101" } } });
   if (grantLoc) await api("/v1/users/me/location-permission", { method: "POST", token, body: { granted: true } });
-  return { token, uid: subOf(token) };
+  return { token, uid: subOf(token), handle };
 }
 const iso = (ms: number) => new Date(Date.now() + ms).toISOString();
 
@@ -45,10 +45,13 @@ async function main(): Promise<void> {
   const owner = await register(`w8own_${stamp}@t.test`, `w8o${stamp % 100000}`);
   const buyer = await register(`w8buy_${stamp}@t.test`, `w8b${stamp % 100000}`);
   const staff = await register(`w8stf_${stamp}@t.test`, `w8s${stamp % 100000}`);
+  // Since WP-3's phone gate, catching requires a verified phone. Phone verify is
+  // proven end-to-end in wp3-gate; here it is a precondition, set directly.
+  await pg.query(`update users set phone_verified_at = now() where id = any($1::uuid[])`, [[owner.uid, buyer.uid, staff.uid]]);
 
   const org = (await api("/v1/orgs", { method: "POST", token: owner.token, body: { name: "W8 Co", tier: "local_superstar" } })).body.data.id;
   const loc = (await api(`/v1/orgs/${org}/locations`, { method: "POST", token: owner.token, body: { name: "Shop", line1: "1 Main", city: "Salt Lake City", region: "UT", postal_code: "84101", geofence_radius_m: 150 } })).body.data.id;
-  await api(`/v1/orgs/${org}/staff`, { method: "POST", token: owner.token, body: { user_id: staff.uid, location_id: loc } });
+  await api(`/v1/orgs/${org}/staff`, { method: "POST", token: owner.token, body: { to_handle: staff.handle, location_id: loc } });
   // Locations are geocoded to SLC by the dev geocoder; set exact coords for a
   // deterministic geofence test.
   await pg.query(`update locations set lat=$1, lng=$2 where id=$3`, [SLC.lat, SLC.lng, loc]);

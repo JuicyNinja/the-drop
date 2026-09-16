@@ -75,7 +75,7 @@ export const patchLocationSchema = z
   .openapi("PatchLocation");
 
 export const addStaffSchema = z
-  .strictObject({ user_id: z.uuid(), location_id: z.uuid() })
+  .strictObject({ to_handle: z.string().min(1).max(40), location_id: z.uuid() })
   .openapi("AddStaff");
 
 export const billingResponseSchema = z

@@ -6,7 +6,10 @@ import { addStaff, listStaff } from "@/lib/orgs";
 import { requireOwner } from "@/lib/auth/org-access";
 
 const params = z.object({ id: z.uuid() });
-const staffSeat = z.object({ user_id: z.string(), location_id: z.string(), granted_at: z.string() });
+const staffSeat = z.object({
+  user_id: z.string(), handle: z.string(), display_name: z.string(),
+  location_id: z.string(), granted_at: z.string(),
+});
 
 /** List staff seats. Owner/admin only. */
 const listRoute = defineRoute(
@@ -44,7 +47,7 @@ const createRoute = defineRoute(
   async ({ params: p, body, user }) => {
     if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
     await requireOwner(user, p.id);
-    return { data: await addStaff(p.id, user.id, body.user_id, body.location_id) };
+    return { data: await addStaff(p.id, user.id, body.to_handle, body.location_id) };
   },
 );
 

@@ -92,6 +92,9 @@ async function main(): Promise<void> {
   const rPhone = await phoneById(R.uid);
 
   const owner = await register(`w9own_${stamp}@t.test`, `w9o${stamp % 100000}`);
+  // Catching requires a verified phone since WP-3's gate (proven in wp3-gate);
+  // set it directly for the accounts that catch/transfer here.
+  await pg.query(`update users set phone_verified_at = now() where id = any($1::uuid[])`, [[S.uid, R.uid, T.uid, owner.uid]]);
   const org = (await api("/v1/orgs", { method: "POST", token: owner.token, body: { name: "W9 Co", tier: "local_superstar" } })).body.data.id;
   const loc = (await api(`/v1/orgs/${org}/locations`, { method: "POST", token: owner.token, body: { name: "Shop", line1: "1 Main", city: "Salt Lake City", region: "UT", postal_code: "84101", geofence_radius_m: 150 } })).body.data.id;
   await pg.query(`update locations set lat=40.7608, lng=-111.891 where id=$1`, [loc]);

@@ -77,6 +77,10 @@ async function main(): Promise<void> {
   const noPerm = await register(`w11np_${stamp}@t.test`, `w11np${stamp % 100000}`, false);
   const ownerA = await register(`w11oa_${stamp}@t.test`, `w11oa${stamp % 100000}`);
   const ownerB = await register(`w11ob_${stamp}@t.test`, `w11ob${stamp % 100000}`);
+  // Catching requires a verified phone since WP-3's gate (proven in wp3-gate).
+  // noPerm is verified too, so its catch reaches the LOCATION gate (the thing
+  // under test) rather than stopping at the phone gate first.
+  await pg.query(`update users set phone_verified_at = now() where id = any($1::uuid[])`, [[buyer.uid, buyer2.uid, noPerm.uid, ownerA.uid, ownerB.uid]]);
 
   const mkOrgLoc = async (owner: { token: string }, name: string): Promise<{ org: string; loc: string }> => {
     const org = (await api("/v1/orgs", { method: "POST", token: owner.token, body: { name, tier: "local_superstar" } })).body.data.id;
@@ -255,8 +259,14 @@ async function main(): Promise<void> {
   const coldOwner = await register(`w11co_${stamp}@t.test`, `w11co${stamp % 100000}`);
   const coldBuyer = await register(`w11cb_${stamp}@t.test`, `w11cb${stamp % 100000}`);
   const coldBuyer2 = await register(`w11cb2_${stamp}@t.test`, `w11cb2${stamp % 100000}`);
+  // The two threshold-crossing catches below need verified phones (WP-3 gate).
+  await pg.query(`update users set phone_verified_at = now() where id = any($1::uuid[])`, [[coldBuyer.uid, coldBuyer2.uid]]);
   // A fresh, isolated city far from SLC/Provo, launched now, threshold = 2 events.
-  const CX = 45.0, CY = -100.0;
+  // Coords are unique per run (offset from a remote base) so nearest-city
+  // resolution always lands on THIS run's city — a fixed point would collide with
+  // cold cities left by earlier runs and resolve to an arbitrary one.
+  const jig = (1 + (stamp % 100000)) / 1e6;
+  const CX = 45.0 + jig, CY = -100.0 - jig;
   const coldCity = (await pg.query(`insert into cities (name, region, lat, lng, active, launched_at, coldstart_days, coldstart_min_events) values ($1,'ND',$2,$3,true, now(), 30, 2) returning id`, [`W11 Cold ${stamp}`, CX, CY])).rows[0].id as string;
   const coldOrg = (await api("/v1/orgs", { method: "POST", token: coldOwner.token, body: { name: "W11 Cold Co", tier: "local_superstar" } })).body.data.id;
   const coldLoc = (await api(`/v1/orgs/${coldOrg}/locations`, { method: "POST", token: coldOwner.token, body: { name: "Cold Shop", line1: "1 Main", city: "Salt Lake City", region: "UT", postal_code: "84101", geofence_radius_m: 150 } })).body.data.id;
