@@ -806,15 +806,21 @@ create table whispers (
   org_id          uuid not null references organizations(id),
   location_id     uuid not null references locations(id),
   would_return_at_full_price boolean not null,   -- the anchor dimension
-  dim_2           smallint not null check (dim_2 between 1 and 5),
-  dim_3           smallint not null check (dim_3 between 1 and 5),
-  dim_4           smallint not null check (dim_4 between 1 and 5),
+  dim_2           smallint not null check (dim_2 between 1 and 5),   -- As described
+  dim_3           smallint not null check (dim_3 between 1 and 5),   -- Quality
+  dim_4           smallint not null check (dim_4 between 1 and 5),   -- Welcome
   note            text,
   created_at      timestamptz not null default now()
 );
 
 create index on whispers (org_id, created_at desc);
 ```
+
+The four dimensions (PRD §10.5; names decided 2026-09-16): the anchor
+`would_return_at_full_price`, then `dim_2` **As described**, `dim_3` **Quality**,
+`dim_4` **Welcome** (how the buyer was treated redeeming a discounted offer — the
+main failure mode of discount platforms). There is deliberately no "value for
+money" dimension. Names are canonical in `lib/whisper-dimensions.ts`.
 
 **Read-only for merchants. Never public.** No API endpoint may expose a whisper to any party other than the authoring buyer, the owning merchant, and admin.
 

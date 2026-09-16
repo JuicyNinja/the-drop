@@ -301,10 +301,11 @@ export async function getPublicDrop(dropId: string, viewerUserId: string | null)
   let canCatch = false;
   let reason: string | null = "UNAUTHENTICATED";
   if (viewerUserId) {
-    const { data: viewer } = await svc.from("users").select("suspended_at, location_perm_granted_at").eq("id", viewerUserId).maybeSingle();
+    const { data: viewer } = await svc.from("users").select("suspended_at, phone_verified_at, location_perm_granted_at").eq("id", viewerUserId).maybeSingle();
     if (!viewer) { reason = "UNAUTHENTICATED"; }
     else if (viewer.suspended_at !== null) { reason = "ACCOUNT_SUSPENDED"; }
     else if ((d.status as string) !== "live") { reason = "DROP_NOT_LIVE"; }
+    else if (viewer.phone_verified_at === null) { reason = "PHONE_UNVERIFIED"; }
     else if (viewer.location_perm_granted_at === null) { reason = "LOCATION_PERMISSION_REQUIRED"; }
     else {
       const { data: prior } = await svc.from("catches").select("id").eq("drop_id", dropId).eq("original_user_id", viewerUserId).maybeSingle();

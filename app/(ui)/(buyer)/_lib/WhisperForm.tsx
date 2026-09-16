@@ -2,21 +2,14 @@
 
 import { useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
+import { WHISPER_DIMENSIONS as DIMENSIONS } from "@/lib/whisper-dimensions";
 
 /**
  * Whisper submission (API-CONTRACT §9, PRD §10.5): private post-redemption
  * feedback, anchored on "would you return at full price". One per redemption;
- * earns clout and feeds the merchant score.
- *
- * NOTE: the PRD names only the anchor. dim_2/dim_3/dim_4 are unnamed in the docs;
- * the three labels below are provisional and flagged for product confirmation.
+ * earns clout and feeds the merchant score. Dimension names live in
+ * lib/whisper-dimensions.ts so this form and the operator read-view agree.
  */
-
-const DIMENSIONS = [
-  { key: "dim_2", label: "Value for money" },
-  { key: "dim_3", label: "Experience" },
-  { key: "dim_4", label: "Matched the offer" },
-] as const;
 
 export function WhisperForm({ redemptionId, onDone }: { redemptionId: string; onDone: (cloutEarned: number) => void }) {
   const [wouldReturn, setWouldReturn] = useState<boolean | null>(null);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { useOperator } from "../_lib/shell";
+import { WHISPER_DIMENSIONS } from "@/lib/whisper-dimensions";
 
 /**
  * Whispers (API-CONTRACT §9): read-only, owner/admin only, anchored on "would
@@ -55,8 +56,13 @@ export default function WhispersPage() {
               <span className="muted op-whisper-date">{date(w.created_at)}</span>
             </div>
             <p className="op-whisper-drop">{w.drop_title}</p>
-            <div className="op-whisper-dims data">
-              <span>{w.dim_2}</span><span>{w.dim_3}</span><span>{w.dim_4}</span>
+            <div className="op-whisper-dims">
+              {WHISPER_DIMENSIONS.map((d) => (
+                <span key={d.key} className="op-whisper-dim">
+                  <span className="op-whisper-dim-label">{d.label}</span>
+                  <span className="op-whisper-dim-val data">{w[d.key]}/5</span>
+                </span>
+              ))}
             </div>
             {w.note && <p className="op-whisper-note">{w.note}</p>}
           </article>

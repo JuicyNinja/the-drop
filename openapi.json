@@ -127,6 +127,7 @@
                   "UNAUTHENTICATED",
                   "FORBIDDEN",
                   "LOCATION_PERMISSION_REQUIRED",
+                  "PHONE_UNVERIFIED",
                   "ACCOUNT_SUSPENDED",
                   "NOT_FOUND",
                   "DROP_GONE",
@@ -10595,7 +10596,7 @@
             }
           },
           "403": {
-            "description": "Error. code: ACCOUNT_SUSPENDED | LOCATION_PERMISSION_REQUIRED",
+            "description": "Error. code: ACCOUNT_SUSPENDED | LOCATION_PERMISSION_REQUIRED | PHONE_UNVERIFIED",
             "content": {
               "application/json": {
                 "schema": {
@@ -12230,6 +12231,7 @@
                             "UNAUTHENTICATED",
                             "FORBIDDEN",
                             "LOCATION_PERMISSION_REQUIRED",
+                            "PHONE_UNVERIFIED",
                             "ACCOUNT_SUSPENDED",
                             "NOT_FOUND",
                             "DROP_GONE",
@@ -12293,6 +12295,7 @@
                             "UNAUTHENTICATED",
                             "FORBIDDEN",
                             "LOCATION_PERMISSION_REQUIRED",
+                            "PHONE_UNVERIFIED",
                             "ACCOUNT_SUSPENDED",
                             "NOT_FOUND",
                             "DROP_GONE",
@@ -12356,6 +12359,7 @@
                             "UNAUTHENTICATED",
                             "FORBIDDEN",
                             "LOCATION_PERMISSION_REQUIRED",
+                            "PHONE_UNVERIFIED",
                             "ACCOUNT_SUSPENDED",
                             "NOT_FOUND",
                             "DROP_GONE",

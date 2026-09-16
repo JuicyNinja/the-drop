@@ -109,7 +109,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         {phase === "verify" && (
           <div className="stack">
             <h1 className="auth-title">Verify your number</h1>
-            <PhoneVerify onVerified={() => setPhase("ready")} onSkip={() => setPhase("ready")} />
+            <p className="muted">Verification is required to finish signing up (PRD §3.4).</p>
+            {/* No skip: SMS verification is mandatory at signup, before return-to-intent (§3.5 step 3). */}
+            <PhoneVerify onVerified={() => setPhase("ready")} />
           </div>
         )}
       </div>

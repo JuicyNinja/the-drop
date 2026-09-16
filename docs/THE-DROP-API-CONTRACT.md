@@ -68,6 +68,7 @@ Error:
 | `UNAUTHENTICATED` | 401 | Missing or invalid token |
 | `FORBIDDEN` | 403 | Authenticated, not permitted |
 | `LOCATION_PERMISSION_REQUIRED` | 403 | User has not granted location permission |
+| `PHONE_UNVERIFIED` | 403 | Phone not SMS-verified; cannot catch (PRD §3.4) |
 | `ACCOUNT_SUSPENDED` | 403 | |
 | `NOT_FOUND` | 404 | |
 | `DROP_GONE` | 409 | Inventory exhausted |

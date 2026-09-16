@@ -555,7 +555,19 @@ Fallback applies for **30 days per city or until a minimum event threshold is re
 
 Private post-redemption feedback. Read-only for merchants. **Never public.**
 
-Four-dimension rating anchored on: *would you return at full price*.
+Four-dimension rating anchored on: *would you return at full price* (a yes/no),
+plus three 1–5 ratings (decided 2026-09-16, WP-13 gap fixes):
+
+1. **Would you return at full price** — the anchor.
+2. **As described** — did the offer match what was delivered.
+3. **Quality** — of the product or service.
+4. **Welcome** — how the buyer was treated while redeeming a discounted offer.
+   This is the main failure mode of discount platforms and the thing worth
+   catching early. There is deliberately **no "value for money" dimension** — it
+   is meaningless on an already-discounted redemption.
+
+Stored as `dim_2` (As described), `dim_3` (Quality), `dim_4` (Welcome); the anchor
+is a boolean. Names are canonical in `lib/whisper-dimensions.ts`.
 
 Whispers feed the merchant score (§10.2) and earn clout (§10.4).
 

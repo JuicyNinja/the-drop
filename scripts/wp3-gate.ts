@@ -188,6 +188,27 @@ async function main(): Promise<void> {
     `callback echoed return_to=${a.returnToEcho} (expected ${dropPath})`,
   );
 
+  // PHONE ENFORCEMENT (PRD §3.4). Registration alone does not verify the phone,
+  // and an unverified account cannot take inventory — the catch gate checks
+  // phone before location, so it fires here while location is still ungranted.
+  const meUnverified = await api("/v1/users/me", { token: a.token });
+  check(
+    "3.4 registration does not verify the phone (phone_verified=false until SMS confirm)",
+    meUnverified.body.data?.phone_verified === false,
+    `phone_verified=${meUnverified.body.data?.phone_verified}`,
+  );
+  const catchUnverified = await api("/v1/catches", {
+    method: "POST",
+    token: a.token,
+    idempotencyKey: `gate-${stamp}-unverified`,
+    body: { drop_id: drop },
+  });
+  check(
+    "3.4 an unverified account cannot catch (PHONE_UNVERIFIED)",
+    catchUnverified.status === 403 && catchUnverified.body.error?.code === "PHONE_UNVERIFIED",
+    `${catchUnverified.status} ${JSON.stringify(catchUnverified.body.error ?? catchUnverified.body)}`,
+  );
+
   // SMS: read the code the dev flow stored in Redis, then confirm.
   const rec = await redis.get<{ code: string }>(`phoneverify:${a.uid}`);
   const smsCode = rec?.code ?? "";

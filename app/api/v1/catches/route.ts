@@ -31,10 +31,17 @@ const route = defineRoute(
         drop: z.object({ id: z.string(), title: z.string() }),
       }),
     },
-    errors: ["LOCATION_PERMISSION_REQUIRED", "DROP_GONE", "DROP_NOT_LIVE", "ALREADY_CAUGHT", "NOT_FOUND"],
+    errors: ["LOCATION_PERMISSION_REQUIRED", "PHONE_UNVERIFIED", "DROP_GONE", "DROP_NOT_LIVE", "ALREADY_CAUGHT", "NOT_FOUND"],
   },
   async ({ body, request, user }) => {
     if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
+
+    // SMS verification is a hard gate on taking inventory (PRD §3.4): an
+    // unverified account cannot catch, so it cannot take a unit or transfer it.
+    // Clout-only enforcement is not enough — the inventory itself is the target.
+    if (user.phone_verified_at === null) {
+      throw new ApiError("PHONE_UNVERIFIED", "Verify your phone number to catch.");
+    }
 
     // Location is the hard gate (PRD §7.4). Denied/never-granted cannot catch.
     if (user.location_perm_granted_at === null) {

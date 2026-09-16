@@ -21,6 +21,7 @@ interface CatchResult { catch_id: string; position_number: number; code: string 
 
 const REASON: Record<string, string> = {
   UNAUTHENTICATED: "Sign in to catch.",
+  PHONE_UNVERIFIED: "Verify your phone in You to catch.",
   LOCATION_PERMISSION_REQUIRED: "Turn on location to catch.",
   ALREADY_CAUGHT: "You already caught this one.",
   DROP_NOT_LIVE: "This drop isn't live.",
