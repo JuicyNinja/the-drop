@@ -183,6 +183,19 @@ export async function recomputeAllClout(now: Date = new Date()): Promise<CloutRe
   // Resolve the current city for events written without one (retroactive join).
   const resolved = await resolveMissingCities(events ?? []);
 
+  // Clout freeze (WP-14): a frozen user stops accruing from the freeze instant.
+  // Events on/after clout_frozen_at are ignored here — the ledger is never
+  // mutated (invariant #6), decay still applies to what accrued before, and
+  // lifting the freeze (null) restores full accrual on the next recompute.
+  const { data: frozenUsers } = await svc
+    .from("users")
+    .select("id, clout_frozen_at")
+    .not("clout_frozen_at", "is", null);
+  const frozenAt = new Map<string, number>();
+  for (const f of frozenUsers ?? []) {
+    frozenAt.set(f.id as string, new Date(f.clout_frozen_at as string).getTime());
+  }
+
   // city -> user -> { raw, decayed }
   const byCity = new Map<string, Map<string, { raw: number; decayed: number }>>();
   let skippedNoCity = 0;
@@ -193,6 +206,8 @@ export async function recomputeAllClout(now: Date = new Date()): Promise<CloutRe
     const cityId = (e.city_id as string | null) ?? resolved.get(e.ref_id as string) ?? null;
     if (cityId === null) { skippedNoCity++; continue; }
     const userId = e.user_id as string;
+    const fa = frozenAt.get(userId);
+    if (fa !== undefined && new Date(e.occurred_at as string).getTime() >= fa) continue; // frozen: no accrual past the freeze
     const points = e.points as number;
     const decayed = points * decayFactor(new Date(e.occurred_at as string), ref);
     let users = byCity.get(cityId);

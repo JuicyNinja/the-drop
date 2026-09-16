@@ -704,8 +704,9 @@ Departure-board aesthetic: split-flap tiles, transit typography, amber/rust. **D
 
 **Scope:**
 - Org and buyer management, suspend, delist, clout freeze
-- City configuration: radius, cold-start window, event threshold
+- City configuration: radius, cold-start window, event threshold, IANA timezone (WP-12)
 - Fraud review: unverified redemptions, velocity flags, transfer patterns
+- **Buyer risk profile** — internal, admin-only (added 2026-09-16; PRD §11.4.1). Tracks cost imposed, not virtue: redemption rate, abandoned catches, transfer patterns, whisper rate (low-weight positive). Return rate / chargebacks / disputes extend it in Phase 2 (WP-16); the table carries the columns now. Thresholds flag for human review, never auto-suspend; minimum event counts before a rate can flag.
 - Taxonomy management
 - Upcoming picks (stub — tab exists, lanes do not)
 - Platform metrics including the saved-address demand map
@@ -715,6 +716,7 @@ Departure-board aesthetic: split-flap tiles, transit typography, amber/rust. **D
 - Every admin mutation writes actor, before, after, and IP
 - Audit log is not updatable or deletable by any role
 - Transfer pattern view surfaces one account receiving from many senders
+- The buyer risk profile is unreachable by any non-admin role — RLS-verified across roles (anon, non-admin, admin), not asserted from code
 
 ---
 

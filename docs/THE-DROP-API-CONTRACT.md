@@ -698,6 +698,38 @@ daily schedule.
 
 ## 10. MERCHANT — OPERATOR PORTAL
 
+### `GET /v1/orgs`
+The orgs the caller has a merchant role on — how the operator portal discovers
+its org context. A role without a scope is meaningless, so each entry resolves
+the role to its org and locations.
+
+```json
+{
+  "data": [
+    {
+      "org_id": "uuid",
+      "name": "Maxwell's",
+      "lane": "local",
+      "role": "merchant_owner",
+      "tier": "local_superstar",
+      "status": "active",
+      "locations": [{ "id": "uuid", "name": "Maxwell's on Main", "city": "Salt Lake City" }]
+    }
+  ]
+}
+```
+
+**Always an array**, never a single object, even at length one. Multi-org is the
+general case (own one shop, work staff shifts at another), so the portal shows an
+org switcher when there is more than one entry and skips it silently at length
+one — the current org must be visible at all times, because creating a drop
+against the wrong org is a real and expensive mistake. `role` is the caller's
+role on that org — `merchant_owner` or `merchant_staff`; for staff, `locations`
+holds only their scoped location. **An empty array is a valid response** — a
+buyer with no merchant role gets `[]`, never a `403`. `GET /v1/users/me.roles`
+carries the same `{ role, org_id, location_id }` scope for each role (a bare role
+name with no org is meaningless).
+
 ### `GET /v1/orgs/{id}`
 ### `GET /v1/orgs/{id}/scoreboard`
 The persistent top-right scoreboard.
@@ -820,6 +852,9 @@ PATCH  /v1/admin/cities/{id}            — radius, cold-start window, event thr
 GET    /v1/admin/fraud/unverified-redemptions
 GET    /v1/admin/fraud/velocity-flags
 GET    /v1/admin/fraud/transfer-patterns
+GET    /v1/admin/fraud/risk                    — buyers flagged for review
+POST   /v1/admin/fraud/risk/recompute          — derived recompute (idempotent)
+GET    /v1/admin/users/{id}/risk               — one buyer's risk profile
 GET    /v1/admin/tags
 POST   /v1/admin/tags
 PATCH  /v1/admin/tags/{id}
@@ -831,6 +866,8 @@ GET    /v1/admin/audit-log
 **Admin limits are stored per-account**, never derived from the tier enum. Enterprise requires arbitrary values; code that computes limits from `tier` breaks Enterprise on day one.
 
 **`POST /v1/admin/users/{id}/clout/grant` does not exist and may not be added.**
+
+The **buyer risk profile** (`/v1/admin/fraud/risk`, `/v1/admin/users/{id}/risk`) is internal and admin-only — never public, never merchant-facing. RLS denies every non-admin role as a second wall behind the admin gate. It flags for human review and never auto-suspends (PRD §11.4.1).
 
 ---
 

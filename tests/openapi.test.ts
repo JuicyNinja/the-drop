@@ -38,12 +38,32 @@ describe("openapi.json (the native contract)", () => {
     expect(Object.keys(doc.paths ?? {})).toEqual([
       "/v1/addresses",
       "/v1/addresses/{id}",
+      "/v1/admin/audit-log",
+      "/v1/admin/board/upcoming",
+      "/v1/admin/cities",
+      "/v1/admin/cities/{id}",
       "/v1/admin/clout/recompute",
+      "/v1/admin/fraud/risk",
+      "/v1/admin/fraud/risk/recompute",
+      "/v1/admin/fraud/transfer-patterns",
+      "/v1/admin/fraud/unverified-redemptions",
+      "/v1/admin/fraud/velocity-flags",
       "/v1/admin/merchant-scores/recompute",
+      "/v1/admin/metrics",
       "/v1/admin/notifications/digest",
       "/v1/admin/notifications/dispatch",
+      "/v1/admin/orgs",
+      "/v1/admin/orgs/{id}",
+      "/v1/admin/orgs/{id}/delist",
+      "/v1/admin/orgs/{id}/suspend",
       "/v1/admin/scheduler/tick",
+      "/v1/admin/tags",
+      "/v1/admin/tags/{id}",
       "/v1/admin/transfers/sweep",
+      "/v1/admin/users",
+      "/v1/admin/users/{id}/clout/freeze",
+      "/v1/admin/users/{id}/risk",
+      "/v1/admin/users/{id}/suspend",
       "/v1/auth/handle-available",
       "/v1/auth/oauth/callback",
       "/v1/auth/oauth/start",
@@ -67,7 +87,9 @@ describe("openapi.json (the native contract)", () => {
       "/v1/orgs",
       "/v1/orgs/{id}",
       "/v1/orgs/{id}/billing",
+      "/v1/orgs/{id}/drops",
       "/v1/orgs/{id}/locations",
+      "/v1/orgs/{id}/scoreboard",
       "/v1/orgs/{id}/staff",
       "/v1/orgs/{id}/subscription/upgrade",
       "/v1/orgs/{id}/whispers",
@@ -106,9 +128,10 @@ describe("openapi.json (the native contract)", () => {
     expect(Object.keys(catches.responses)).toContain("201");
     expect(Object.keys(catches.responses)).toContain("409");
     expect(Object.keys(catches.responses)).not.toContain("501");
-    // The per-drop stats route is still a WP-13 placeholder (501).
+    // The per-drop stats route is built (WP-13): 200 real stats, no 501 shell.
     const stats = (doc.paths?.["/v1/drops/{id}/stats"] as { get: { responses: Record<string, unknown> } }).get;
-    expect(Object.keys(stats.responses)).toContain("501");
+    expect(Object.keys(stats.responses)).toContain("200");
+    expect(Object.keys(stats.responses)).not.toContain("501");
   });
 
   it("documents both operational routes as header-exempt and unauthenticated", () => {

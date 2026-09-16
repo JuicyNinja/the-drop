@@ -49,6 +49,13 @@ export async function isAdmin(user: UserRecord): Promise<boolean> {
   return Boolean(data);
 }
 
+/** Platform admin, else 403. The server-side gate on every admin route. */
+export async function requireAdmin(user: UserRecord): Promise<void> {
+  if (!(await isAdmin(user))) {
+    throw new ApiError("FORBIDDEN", "Admin only.");
+  }
+}
+
 /** Resolve the org that owns a drop, or throw NOT_FOUND. */
 export async function orgIdForDrop(dropId: string): Promise<string> {
   const { data, error } = await getServiceClient()

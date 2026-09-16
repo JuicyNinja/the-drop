@@ -586,6 +586,32 @@ Reduced scope in v1 because Local auto-publishes and no approval queue exists.
 - Velocity check flags (§7.6)
 - Transfer pattern review (§6.3)
 
+#### 11.4.1 Buyer risk profile — DOCTRINE (decided 2026-09-16, WP-14)
+
+An **internal, admin-only** profile per buyer. Never public, never merchant-facing,
+no endpoint exposes it to any role but admin, and RLS denies every other role — it
+is a second wall behind the admin gate, not a code assertion. It tracks **cost
+imposed, not virtue**:
+
+- **Redemption rate** — caught versus redeemed
+- **Abandoned catches** — caught, window closed unredeemed
+- **Transfer patterns** — receiving from many unrelated senders
+- **Whisper rate** — a low-weight *positive* signal; it never raises a flag
+
+Return rate, chargebacks, and dispute outcomes arrive in Phase 2 with WP-16; the
+table already carries the columns so payments extend it with data, not schema.
+
+Two rules, both load-bearing:
+
+1. **Thresholds flag for human review; nothing auto-suspends.** A number that
+   suspends automatically will suspend the person whose car broke down twice. No
+   code path reads the flag to act — suspension is only ever a manual admin
+   decision (§11.2), logged like any other (§11.8).
+2. **Minimum event counts before a profile means anything.** Two abandoned
+   catches out of three is noise; two out of two hundred is a pattern. Below the
+   minimum, a rate is null and cannot flag — the same reasoning as the top-1%
+   clout cap being unreachable below 100 active users (§10.4).
+
 ### 11.5 Upcoming picks
 Hand-curated previews for Maker and DigiDrop. Built as a stub in v1 — the board tab exists, the lanes do not.
 
