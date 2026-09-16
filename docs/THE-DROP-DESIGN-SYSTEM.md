@@ -468,7 +468,7 @@ Mobile is the product. These are limits, not goals.
 |---|---|
 | LCP (board, 4G) | < 2.0s |
 | Initial JS | < 180KB gzipped |
-| Fonts | 3 WOFF2, subset latin, `font-display: swap`, < 120KB total |
+| Fonts | 3 WOFF2, subset latin, `font-display: swap`, ~138KB total (WP-13 actual: Bricolage variable 76KB + Satoshi variable 42KB + Departure Mono 22KB). Bricolage's 76KB earns its place — it is the display face and its variable weight/width axes are used. |
 | Cinemagraph | 400KB each, lazy, one playing at a time |
 | Board query | < 200ms p95 |
 | CLS | < 0.05 |

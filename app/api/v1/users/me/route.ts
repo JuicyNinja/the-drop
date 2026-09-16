@@ -22,7 +22,13 @@ const meProfileSchema = z
     location_permission_granted: z.boolean(),
     walkthrough_completed: z.boolean(),
     active_address_id: z.string().nullable(),
-    roles: z.array(z.string()),
+    roles: z.array(
+      z.object({
+        role: z.string(),
+        org_id: z.string().nullable(),
+        location_id: z.string().nullable(),
+      }),
+    ),
     clout_tier: z.number().nullable(),
     badges: z.array(
       z.object({ slug: z.string(), label: z.string(), earned_at: z.string() }),

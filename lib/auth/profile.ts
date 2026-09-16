@@ -19,7 +19,9 @@ export interface MeProfile {
   location_permission_granted: boolean;
   walkthrough_completed: boolean;
   active_address_id: string | null;
-  roles: string[];
+  // A role without a scope is meaningless: each role carries its org/location.
+  // Platform admin has both null.
+  roles: { role: string; org_id: string | null; location_id: string | null }[];
   clout_tier: number | null;
   badges: { slug: string; label: string; earned_at: string }[];
   addresses: {
@@ -43,7 +45,7 @@ export interface MeProfile {
 export async function getMeProfile(user: UserRecord): Promise<MeProfile> {
   const svc = getServiceClient();
   const [roles, badges, addresses, follows, tags, prefs, clout] = await Promise.all([
-    svc.from("user_roles").select("role").eq("user_id", user.id),
+    svc.from("user_roles").select("role, org_id, location_id").eq("user_id", user.id),
     svc.from("user_badges").select("earned_at, badges(slug, label)").eq("user_id", user.id),
     svc.from("addresses").select("id, label, city, region, radius_miles, is_home").eq("user_id", user.id),
     svc.from("follows").select("org_id, lane, tier").eq("user_id", user.id),
@@ -65,7 +67,11 @@ export async function getMeProfile(user: UserRecord): Promise<MeProfile> {
     location_permission_granted: user.location_perm_granted_at !== null,
     walkthrough_completed: user.walkthrough_completed_at !== null,
     active_address_id: user.active_address_id,
-    roles: (roles.data ?? []).map((r) => r.role as string),
+    roles: (roles.data ?? []).map((r) => ({
+      role: r.role as string,
+      org_id: (r.org_id as string | null) ?? null,
+      location_id: (r.location_id as string | null) ?? null,
+    })),
     clout_tier: (clout.data?.tier as number | undefined) ?? null,
     badges: (badges.data ?? []).map((b) => {
       const badge = b.badges as unknown as { slug: string; label: string } | null;

@@ -40,9 +40,12 @@ export interface DropCard {
 }
 
 export interface BoardResult {
-  data: Record<string, { on_fire: DropCard[]; new: DropCard[] }>;
+  data: Record<string, { on_fire: DropCard[]; new: DropCard[]; gone: DropCard[] }>;
   meta: { city_id: string | null; cold_start: boolean; ranking: string };
 }
+
+/** A drop leaves the board this long after it goes Gone (DESIGN-SYSTEM §4.9). */
+const GONE_BOARD_MS = 5 * 60 * 1000;
 
 interface LiveDropRow {
   id: string; lane: string; title: string; image_urls: string[] | null;
@@ -154,8 +157,8 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
   }
 
   // Live drops in the city, with pressure + location coords. No city → no board.
-  const data: Record<string, { on_fire: DropCard[]; new: DropCard[] }> = {
-    local: { on_fire: [], new: [] }, maker: { on_fire: [], new: [] }, digital: { on_fire: [], new: [] },
+  const data: Record<string, { on_fire: DropCard[]; new: DropCard[]; gone: DropCard[] }> = {
+    local: { on_fire: [], new: [], gone: [] }, maker: { on_fire: [], new: [], gone: [] }, digital: { on_fire: [], new: [], gone: [] },
   };
   if (!cityId) return { data, meta: { city_id: null, cold_start: true, ranking: "proximity_fallback" } };
 
@@ -217,7 +220,41 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
     else if (cold) onFireSort = lane === "local" ? byDistance : byRecency;
     const onFire = [...laneDrops].sort(onFireSort).slice(0, PER_LANE).map(toCard);
     const fresh = [...laneDrops].sort(byRecency).slice(0, PER_LANE).map(toCard);
-    data[lane] = { on_fire: onFire, new: fresh };
+    data[lane] = { on_fire: onFire, new: fresh, gone: [] };
+  }
+
+  // Recently-Gone drops stay on the board for 5 minutes (DESIGN-SYSTEM §4.9),
+  // shadowed and unclickable, then leave. gone_at drives 'gone'; expired drops
+  // use updated_at (they never set gone_at).
+  const { data: goneRows } = await svc
+    .from("drops")
+    .select("id, lane, title, image_urls, quantity_total, quantity_remaining, price_cents, live_until, redeem_until, status, org_id, gone_at, updated_at")
+    .in("status", ["gone", "expired"])
+    .eq("city_id", cityId);
+  const cutoff = now.getTime() - GONE_BOARD_MS;
+  const goneOrgIds = new Set<string>();
+  const recentGone = (goneRows ?? []).filter((d) => {
+    const at = (d.status === "gone" ? (d.gone_at as string | null) : (d.updated_at as string | null)) ?? null;
+    return at !== null && new Date(at).getTime() >= cutoff;
+  });
+  for (const d of recentGone) goneOrgIds.add(d.org_id as string);
+  if (goneOrgIds.size > 0) {
+    const { data: gorgs } = await svc.from("organizations").select("id, name").in("id", [...goneOrgIds]);
+    for (const o of gorgs ?? []) nameByOrg.set(o.id as string, o.name as string);
+  }
+  for (const d of recentGone) {
+    if (allowedOrgIds !== null && !allowedOrgIds.has(d.org_id as string)) continue;
+    const lane = d.lane as string;
+    if (!data[lane]) continue;
+    const qt = d.quantity_total as number;
+    const qr = d.quantity_remaining as number;
+    data[lane].gone.push({
+      id: d.id as string, lane, title: d.title as string, image_url: (d.image_urls as string[] | null)?.[0] ?? null,
+      quantity_total: qt, quantity_remaining: qr, pct_remaining: Number((qt > 0 ? qr / qt : 0).toFixed(4)),
+      price_cents: (d.price_cents as number | null) ?? null, live_until: (d.live_until as string | null) ?? null,
+      redeem_until: (d.redeem_until as string | null) ?? null, status: d.status as string,
+      merchant: { org_id: d.org_id as string, name: nameByOrg.get(d.org_id as string) ?? "", redemption_rate: rateByOrg.get(d.org_id as string) ?? null },
+    });
   }
 
   return { data, meta: { city_id: cityId, cold_start: cold, ranking: cold ? "proximity_fallback" : "pressure" } };

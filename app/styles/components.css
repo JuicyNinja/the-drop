@@ -1,0 +1,524 @@
+/*
+ * THE DROP — component + surface styles. Tokenized; no hardcoded hex (§14).
+ * The board is the object, the page is the hall, the flip is the only loud thing.
+ */
+
+/* ============================ SPLIT-FLAP (§6) ============================ */
+.sf {
+  display: inline-flex;
+  gap: 2px;
+}
+.sf-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.72em;
+  padding: 0.06em 0.1em;
+  background: var(--board);
+  color: var(--on-board);
+  font-family: var(--font-data);
+  border-radius: 3px;
+  position: relative;
+  line-height: 1;
+}
+/* the split line at rest — identifies the tile as a flap before it moves */
+.sf-tile::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--board-deep);
+}
+.sf-flip {
+  animation: sf-flip 180ms cubic-bezier(0.45, 0.05, 0.15, 1);
+}
+@keyframes sf-flip {
+  0% { transform: rotateX(0deg); }
+  49% { transform: rotateX(-90deg); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-flip { animation: none; }
+}
+
+/* ============================ PIPS (§4.5) =============================== */
+.pips {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+  display: inline-block;
+}
+.pip-onboard { background: var(--board-deep); }
+.pip-fill {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  /* a pip going out is a mechanical hard step, never a fade */
+  transition: width 120ms steps(1, end);
+}
+.pip-low .pip-fill { background: var(--flap); }
+
+/* ============================ LOGO BUBBLE (§4.2) ======================= */
+.logo-bubble {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  background: var(--board);
+  color: var(--on-board);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-md);
+  box-shadow: var(--sh-logo);
+  z-index: 2;
+}
+
+/* ============================ GONE STAMP (§4.9) ======================== */
+.gone-stamp {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  color: var(--oxide);
+  opacity: 0.7;
+  font-size: var(--t-2xl);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ============================ DROP CARD (§4) =========================== */
+.card-wrap {
+  display: block;
+  position: relative;
+  perspective: 1200px;
+}
+.card-wrap-gone { cursor: default; }
+.card {
+  position: relative;
+  background: transparent;
+  border-radius: var(--r-tile);
+  min-height: 420px;
+}
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  transform-style: preserve-3d;
+  transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.card-flipped .card-inner { transform: rotateY(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .card-inner { transition: opacity 160ms linear; }
+  .card-flipped .card-inner { transform: none; }
+  .card-flipped .card-front { opacity: 0; }
+  .card-flipped .card-back { opacity: 1; }
+}
+.card-face {
+  position: relative;
+  inset: 0;
+  backface-visibility: hidden;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-tile);
+  box-shadow: var(--sh-tile);
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.card-front { min-height: 420px; }
+.card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(180deg);
+  justify-content: flex-start;
+  gap: var(--s-4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-back { transform: none; opacity: 0; transition: opacity 160ms linear; }
+}
+.card-wrap:hover .card-face { box-shadow: var(--sh-lift); }
+
+.chip {
+  position: absolute;
+  top: var(--s-4);
+  right: var(--s-4);
+  font-size: var(--t-xs);
+}
+.chip-flap { font-size: var(--t-xs); }
+.chip-gone .sf-tile { background: var(--oxide); }
+
+.card-offer {
+  margin: var(--s-5) 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-poster {
+  aspect-ratio: 16 / 9;
+  background: var(--board);
+  border-radius: var(--r-field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.card-poster-mark {
+  color: var(--board-lift);
+  font-size: var(--t-3xl);
+  letter-spacing: 0.1em;
+}
+.card-scarcity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.card-count {
+  font-size: var(--t-sm);
+  color: var(--grey);
+}
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: auto;
+}
+.card-merchant {
+  font-size: var(--t-sm);
+  color: var(--ink);
+}
+.card-score {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-xs);
+  color: var(--grey);
+}
+.score-bar {
+  width: 88px;
+  height: 6px;
+  background: var(--hall-sunk);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.score-fill {
+  display: block;
+  height: 100%;
+  background: var(--grey);
+}
+
+/* Width utilities (5% steps). The strict CSP (no unsafe-inline, API-CONTRACT §2)
+   blocks inline style attributes, so a dynamic fill width is a class, not an
+   inline style. 5% granularity is below the eye's threshold on a 10px pip or an
+   88px bar, and the last (partial) pip is the only one that is ever fractional. */
+.wq-0 { width: 0; }
+.wq-5 { width: 5%; }
+.wq-10 { width: 10%; }
+.wq-15 { width: 15%; }
+.wq-20 { width: 20%; }
+.wq-25 { width: 25%; }
+.wq-30 { width: 30%; }
+.wq-35 { width: 35%; }
+.wq-40 { width: 40%; }
+.wq-45 { width: 45%; }
+.wq-50 { width: 50%; }
+.wq-55 { width: 55%; }
+.wq-60 { width: 60%; }
+.wq-65 { width: 65%; }
+.wq-70 { width: 70%; }
+.wq-75 { width: 75%; }
+.wq-80 { width: 80%; }
+.wq-85 { width: 85%; }
+.wq-90 { width: 90%; }
+.wq-95 { width: 95%; }
+.wq-100 { width: 100%; }
+
+/* Gone (§4.9): greyscale, flat shadow, unclickable */
+.card-gone { filter: grayscale(1); pointer-events: none; }
+.card-gone .card-face { box-shadow: var(--sh-gone); }
+
+.card-back-title {
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 600;
+  font-size: var(--t-lg);
+  margin: var(--s-5) 0 0;
+}
+.card-back-list { margin: 0; display: flex; flex-direction: column; gap: var(--s-4); }
+.card-back-list div { display: flex; flex-direction: column; gap: 2px; }
+.card-back-list dt { font-size: var(--t-xs); color: var(--grey); }
+.card-back-list dd { margin: 0; font-size: var(--t-base); color: var(--ink); }
+
+/* ============================ BOARD (§10) ============================== */
+.board-hall {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-4) var(--s-9);
+}
+.board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+  flex-wrap: wrap;
+}
+.board-title { font-size: var(--t-xl); }
+.board-lane-label {
+  font-size: var(--t-md);
+  color: var(--grey);
+  margin: var(--s-7) 0 var(--s-4);
+}
+.board-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-5);
+}
+@media (min-width: 768px) {
+  .board-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .board-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.board-empty {
+  color: var(--grey);
+  font-size: var(--t-base);
+  padding: var(--s-6) 0;
+}
+
+/* ============================ NAV TABS ================================= */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--hall);
+  border-bottom: 1px solid var(--hairline);
+}
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+}
+.nav-brand {
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 700, "wdth" 90;
+  font-size: var(--t-lg);
+  margin-right: auto;
+}
+.nav-link {
+  font-size: var(--t-base);
+  color: var(--grey);
+  padding: var(--s-2) 0;
+}
+.nav-link[data-active="true"] {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--signal);
+}
+
+/* ============================ MISC ==================================== */
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-4) var(--s-9);
+}
+.muted { color: var(--grey); }
+.stack { display: flex; flex-direction: column; gap: var(--s-4); }
+.row { display: flex; align-items: center; gap: var(--s-3); }
+.field-error { color: var(--oxide); font-size: var(--t-sm); margin: 0; }
+
+.auth-card {
+  max-width: 380px;
+  margin: var(--s-8) auto 0;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-tile);
+  box-shadow: var(--sh-tile);
+  padding: var(--s-6);
+}
+.auth-title { font-size: var(--t-xl); }
+
+/* ============================ DROP DETAIL (§4.7) ======================= */
+.detail { max-width: 720px; }
+.detail-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-tile);
+  box-shadow: var(--sh-tile);
+  padding: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+}
+.detail-offer { margin: var(--s-5) 0 0; }
+.detail-body { }
+.detail-facts { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s-5); }
+.detail-facts div { display: flex; flex-direction: column; gap: 2px; }
+.detail-facts dt { font-size: var(--t-xs); color: var(--grey); }
+.detail-facts dd { margin: 0; }
+.position-hint {
+  font-size: var(--t-md);
+  color: var(--ink);
+}
+.position-hint-num { color: var(--signal); font-size: var(--t-lg); }
+.detail-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+
+/* ============================ POSITION / CONFIRM (§5) ================== */
+.confirm {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-5);
+  text-align: center;
+  padding: var(--s-6);
+}
+.confirm-caught { font-size: var(--t-xl); color: var(--ink); }
+.confirm-code { font-size: var(--t-base); }
+.position-hero {
+  background: var(--board);
+  border-radius: var(--r-tile);
+  padding: var(--s-7) var(--s-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  box-shadow: var(--sh-tile);
+}
+.position-flap { font-size: var(--t-3xl); }
+.position-flap .sf-tile { background: var(--board); color: var(--signal); }
+.position-of { font-size: var(--t-sm); color: var(--grey-mute); }
+
+/* ============================ WALLET (§5.2) =========================== */
+.tabs { display: flex; gap: var(--s-4); border-bottom: 1px solid var(--hairline); margin: var(--s-5) 0; }
+.tab { background: none; border: none; padding: var(--s-3) 0; font-size: var(--t-base); color: var(--grey); }
+.tab[data-active="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--signal); }
+.wallet-list { display: flex; flex-direction: column; gap: var(--s-3); }
+.wallet-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-tile);
+  box-shadow: var(--sh-tile);
+  padding: var(--s-4);
+}
+.wallet-pos { font-size: var(--t-xl); color: var(--signal); }
+.wallet-body { flex: 1; min-width: 0; }
+.wallet-title { margin: 0; font-size: var(--t-md); }
+.wallet-status { margin: 2px 0 0; font-size: var(--t-sm); }
+.wallet-send-btn { min-height: 40px; padding: var(--s-2) var(--s-4); }
+.send-tab { max-width: 460px; }
+.handle-hits { list-style: none; margin: var(--s-2) 0 0; padding: 0; border: 1px solid var(--hairline); border-radius: var(--r-field); overflow: hidden; }
+.handle-hit { width: 100%; text-align: left; background: #fff; border: none; padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--hairline); }
+.handle-hit:hover { background: var(--hall-sunk); }
+.incoming { margin-bottom: var(--s-5); }
+.incoming-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  background: var(--board);
+  color: var(--on-board);
+  border-radius: var(--r-tile);
+  padding: var(--s-4);
+  flex-wrap: wrap;
+}
+.incoming-row .btn-catch { min-height: 40px; padding: var(--s-2) var(--s-4); }
+
+/* ============================ YOU (§5.4) ============================== */
+.you { max-width: 520px; }
+.you-handle { font-size: var(--t-xl); }
+.you-name { margin: 2px 0 0; }
+.you-panel {
+  background: var(--board);
+  color: var(--on-board);
+  border-radius: var(--r-tile);
+  padding: var(--s-5);
+}
+.you-panel-label { font-size: var(--t-sm); margin: 0 0 var(--s-2); }
+.you-tier { font-size: var(--t-2xl); color: var(--signal); margin: 0; }
+.you-usernum { font-size: var(--t-sm); color: var(--grey); }
+.you-badges { flex-wrap: wrap; }
+.badge {
+  background: var(--hall-sunk);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--t-sm);
+}
+.you-signout { align-self: flex-start; min-height: 44px; padding: var(--s-2) var(--s-5); }
+.past-expired { filter: grayscale(1); }
+
+/* ============================ KEYPAD (§7.2) ========================== */
+.redeem-sheet {
+  max-width: 420px;
+  margin: var(--s-7) auto 0;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-tile);
+  box-shadow: var(--sh-tile);
+  padding: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-5);
+}
+.redeem-prompt { font-size: var(--t-md); margin: 0; }
+.redeem-where { margin: 0; }
+.redeem-done { font-size: var(--t-xl); text-align: center; }
+.redeem-pick { cursor: pointer; text-align: left; }
+.keypad { position: relative; }
+.keypad-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: none;
+  min-height: 0;
+}
+.keypad-tiles { display: flex; gap: var(--s-3); }
+.keypad-tile {
+  width: 56px;
+  height: 68px;
+  background: var(--board);
+  color: var(--on-board);
+  border-radius: var(--r-field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-2xl);
+  position: relative;
+}
+.keypad-tile::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: var(--board-deep);
+}

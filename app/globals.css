@@ -1,9 +1,161 @@
-:root {
-  color-scheme: light dark;
+@import "./styles/tokens.css";
+@import "./styles/components.css";
+@import "./styles/operator.css";
+
+/*
+ * Base. The page is the hall: near-white, barely warm. Body is Satoshi.
+ * The one loud thing is the flip; everything here stays quiet.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 html,
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  padding: 0;
+  background: var(--hall);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: var(--t-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 2.3 Type treatments */
+.display {
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 600, "wdth" 100, "opsz" 40;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.coupon {
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 800, "wdth" 85;
+  font-size: var(--t-2xl);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.data {
+  font-family: var(--font-data);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 600, "wdth" 100, "opsz" 40;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img,
+video {
+  max-width: 100%;
+  display: block;
+}
+
+/* 7.1 Fields */
+input,
+textarea,
+select {
+  background: var(--hall-sunk);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-field);
+  padding: 14px 16px;
+  font: 400 var(--t-base) var(--font-ui);
+  min-height: 48px;
+  color: var(--ink);
+  width: 100%;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  background: #fff;
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px rgba(242, 92, 5, 0.14);
+  outline: none;
+}
+label {
+  display: block;
+  font-size: var(--t-sm);
+  color: var(--grey);
+  margin-bottom: var(--s-2);
+}
+
+/* 8 Buttons — say exactly what happens; never an arrow glyph. */
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+.btn-catch {
+  background: var(--signal);
+  color: #fff;
+  font: 600 var(--t-md) var(--font-ui);
+  padding: 16px 32px;
+  border: none;
+  border-radius: var(--r-btn);
+  min-height: 52px;
+  box-shadow: 0 2px 0 var(--signal-edge);
+}
+.btn-catch:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+.btn-catch:disabled {
+  background: var(--grey-mute);
+  box-shadow: 0 2px 0 var(--grey);
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--r-btn);
+  min-height: 52px;
+  padding: 16px 32px;
+  font: 600 var(--t-base) var(--font-ui);
+}
+.btn-board {
+  background: var(--board-lift);
+  color: var(--on-board);
+  border: none;
+  border-radius: var(--r-btn);
+  min-height: 52px;
+  padding: 16px 32px;
+  font: 600 var(--t-base) var(--font-ui);
+}
+
+/* 12 Accessibility — visible focus ring on every interactive element. */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-btn);
+}
+
+/* 12 prefers-reduced-motion: disable every flip; state still registers instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

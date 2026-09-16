@@ -68,6 +68,81 @@ export async function getOrg(orgId: string): Promise<OrgRecord> {
   return data as OrgRecord;
 }
 
+/**
+ * The orgs the caller has a merchant role on (API-CONTRACT §10). This is how the
+ * operator portal discovers its org context — a role without a scope is
+ * meaningless, so this resolves each merchant role to its org and locations.
+ *
+ * Multi-org is the general case (own one shop, work staff shifts at another), so
+ * this is always an array — empty for a pure buyer, never a 403. When a person
+ * holds both roles on one org, owner wins. A staff member sees only the
+ * location(s) their seat is scoped to; an owner sees all of the org's.
+ */
+export interface OrgMembership {
+  org_id: string;
+  name: string;
+  lane: string;
+  role: "merchant_owner" | "merchant_staff";
+  tier: string;
+  status: string;
+  locations: { id: string; name: string; city: string }[];
+}
+
+export async function listOrgsForUser(userId: string): Promise<OrgMembership[]> {
+  const svc = getServiceClient();
+  const { data: roleRows, error } = await svc
+    .from("user_roles")
+    .select("role, org_id, location_id")
+    .eq("user_id", userId)
+    .in("role", ["merchant_owner", "merchant_staff"]);
+  if (error) throw new Error(`load memberships failed: ${error.message}`);
+
+  // Collapse to one entry per org; owner beats staff, staff seats accumulate.
+  const byOrg = new Map<string, { role: "merchant_owner" | "merchant_staff"; seatLocationIds: Set<string> }>();
+  for (const r of roleRows ?? []) {
+    const orgId = r.org_id as string | null;
+    if (!orgId) continue;
+    const role = r.role as "merchant_owner" | "merchant_staff";
+    const entry = byOrg.get(orgId);
+    if (!entry) {
+      byOrg.set(orgId, { role, seatLocationIds: new Set(r.location_id ? [r.location_id as string] : []) });
+    } else {
+      if (role === "merchant_owner") entry.role = "merchant_owner";
+      if (r.location_id) entry.seatLocationIds.add(r.location_id as string);
+    }
+  }
+  const orgIds = [...byOrg.keys()];
+  if (orgIds.length === 0) return [];
+
+  const [{ data: orgs }, { data: locs }] = await Promise.all([
+    svc.from("organizations").select("id, name, lane, tier, status").in("id", orgIds),
+    svc.from("locations").select("id, org_id, name, city").in("org_id", orgIds).order("created_at", { ascending: true }),
+  ]);
+  const orgById = new Map((orgs ?? []).map((o) => [o.id as string, o]));
+
+  const result: OrgMembership[] = [];
+  for (const [orgId, m] of byOrg) {
+    const org = orgById.get(orgId);
+    if (!org) continue; // role on a vanished org — skip rather than surface a broken row
+    let locations = (locs ?? [])
+      .filter((l) => (l.org_id as string) === orgId)
+      .map((l) => ({ id: l.id as string, name: l.name as string, city: l.city as string }));
+    if (m.role === "merchant_staff") locations = locations.filter((l) => m.seatLocationIds.has(l.id));
+    result.push({
+      org_id: orgId,
+      name: org.name as string,
+      lane: org.lane as string,
+      role: m.role,
+      tier: org.tier as string,
+      status: org.status as string,
+      locations,
+    });
+  }
+  // Owned orgs first, then alphabetical — a stable, predictable switcher order.
+  result.sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === "merchant_owner" ? -1 : 1));
+  return result;
+}
+
 export async function createOrg(caller: UserRecord, input: CreateOrgInput): Promise<OrgRecord> {
   const name = sanitizeText(input.name, 120);
   if (!name) throw new ApiError("VALIDATION_ERROR", "Invalid name.", { body: [{ path: "name", message: "required" }] });
