@@ -57,6 +57,18 @@ export default function DropPage() {
     return () => { alive = false; };
   }, [id]);
 
+  // Share attribution: a signed-in viewer who arrived through a share link
+  // (/s/{token} redirects here with ?ref={token}) confirms the return so the
+  // SHARER earns clout — the sole clout path for a share (API-CONTRACT §9). The
+  // server owns every guard (no self-attribution, once-only, concurrency-safe),
+  // so this is fire-and-forget; a repeat or self return simply no-ops.
+  useEffect(() => {
+    if (!getSession()) return;
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (!ref) return;
+    void api(`/v1/shares/${encodeURIComponent(ref)}/verify`, { method: "POST" });
+  }, [id]);
+
   if (!drop) return <div className="page muted">Loading.</div>;
 
   const gone = drop.status === "gone" || drop.status === "expired";

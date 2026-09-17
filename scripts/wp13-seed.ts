@@ -32,6 +32,9 @@ async function main(): Promise<void> {
     const token = (await api("/v1/auth/oauth/callback", { method: "POST", body: { code: `dev-code:${email}`, state: s } })).data.session.access_token;
     await api("/v1/auth/register/complete", { method: "POST", token, body: { full_name: `Name ${handle}`, handle, phone: `+1801${Math.floor(1000000 + Math.random() * 8999999)}`, address: { label: "Home", line1: "1 S Main St", city: "Salt Lake City", region: "UT", postal_code: "84101" } } });
     await api("/v1/users/me/location-permission", { method: "POST", token, body: { granted: true } });
+    // Catching requires a verified phone (WP-3). Set it directly so the seeded
+    // accounts can catch immediately — the SMS chain itself is proven in wp3-gate.
+    await pg.query(`update users set phone_verified_at = now() where email = $1`, [email]);
     return token;
   }
 
