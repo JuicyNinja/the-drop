@@ -534,7 +534,7 @@ A category tile shows range. A drop tile shows one thing. Never blend them.
 
 - 16:9
 - **Shot straight down from directly above** (flat-lay style) or **straight on** (result style). Never a dramatic angle. This removes the question of what the room behind the product looks like — a taqueria's actual kitchen never appears.
-- **Flat solid color ground**, edge to edge, no texture, no gradient, no vignette
+- **Flat solid color ground**, edge to edge — a single uniform color fill with **no texture, no gradient, no shading, no vignette, no wall or surface detail**. The ground is a **deep, saturated, full-strength rendering of the group's color (§15.3)** — the true rich shade, never pale, washed-out, greyed, or tinted lighter. In the prompt the ground word and this saturation instruction travel together, never split apart. The rendered ground **is** the color the buyer actually sees; the CSS token only appears as label backing (§15.2.2). If the photo ground drifts lighter than its token, the wayfinding is coded to a color that is not on screen — blur a pale steel-blue against a pale moss and they read as neighbours; blur `#2E5A78` against `#5E7444` and they do not.
 - Bright even studio light. Soft contact shadow only — **no dramatic or raking light**
 - **The lower third is a reserved quiet zone.** Composition stays calm there; the label sits on it.
 - No text, no logos, no faces, no hands
@@ -542,6 +542,13 @@ A category tile shows range. A drop tile shows one thing. Never blend them.
 - Cheerful, punchy, contemporary
 
 The flat ground does the work. It makes unrelated subjects read as siblings, it survives being shrunk to 200px because there is no fine detail to lose, and it is the one variable the platform fully controls.
+
+> **Known limit of the saturation anchor (measured, 2026-09-18, Ideogram 4.0, 24-tile pass).** The "deep, saturated" wording fixes the failure it was written for — the muted tokens that washed out to grey — but it **overshoots bright and warm tokens**, which do not want more saturation. Measured mean-vs-target deltas (max RGB channel):
+> - **Fixed, the reason this exists:** steel `#2E5A78` went from Δ82 (pale grey-blue) to **Δ21/25**; teal `#1E7A6F` landed at **Δ15/18**. These were the muddy blur-test neighbours; they now read true.
+> - **Overshoots:** orange `#F25C05` renders dark/burnt (**Δ60–75**, the worst); moss `#5E7444` is uneven (Pets Δ12 but Activities/Outdoor **Δ45–51**); two of five bone `#EDE6D8` tiles warm toward tan (**Δ57–63**).
+> - **Net:** 15 of 24 within Δ30, and no two adjacent grounds collide (burnt-vs-hot orange is one shade between two oranges, and nothing else is near either — wayfinding holds).
+>
+> A words-only saturation push is the wrong tool for an already-saturated or light token. If this is revisited, start from these numbers, not a fresh pass. A per-token hex anchor was considered and deferred: these models read hex loosely, and on a rank-3 element (§15.2.1) it risks trading one overshoot for another. The real acceptance test is **tiles in the board at mobile size with labels on them**, not the measurement — fix against that surface if orange still reads wrong there.
 
 ### 15.2.1 Navigation hierarchy — DOCTRINE
 
