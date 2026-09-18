@@ -566,6 +566,8 @@ A category tile is **navigation furniture**, not a photograph. Three jobs, in st
 
 At mobile a category chip is roughly 160×90. Nothing inside the image is legible at that size and nothing is expected to be. Density is safe as long as the ground stays visible between items and the quiet zone holds.
 
+**The label strip carries the exact ground token; the photo ground may drift — and that is fine.** Rank-1 is the ground *color*, and the surface the eye actually locks onto is the CSS label strip (§15.2.2), filled with the group's exact `--g-*` token and pixel-identical on every chip. The generated photo ground behind it only approximates that token; by measured variance it can drift a shade (the saturation anchor overshoots bright and warm tokens — §15.2). **That drift never reaches wayfinding.** The token-accurate strip is always on screen carrying the label, so no two groups collide on the color the navigation is coded to, however the photo grounds render. This is why the color question is settled at the token, not the pixel: a photo ground that is merely close is good enough, because the strip — not the photo — is the wayfinding surface. Chase pixel-accuracy in the generated ground only if a tile fails the blur test on this surface, never against a measurement.
+
 ### 15.2.2 Labels are CSS, never generated
 
 The category name is a **real DOM element overlaid on the tile.** It is never generated into the image.

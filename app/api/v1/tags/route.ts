@@ -21,7 +21,9 @@ const route = defineRoute(
       data: z.array(
         z.object({
           id: z.string(),
+          slug: z.string(),
           label: z.string(),
+          ground_hex: z.string().nullable(),
           leaves: z.array(z.object({ id: z.string(), label: z.string(), slug: z.string() })),
         }),
       ),

@@ -5,6 +5,7 @@ import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 import { DropCard, type BoardCard } from "@/components/DropCard";
 import { BoardFilter, type BoardSort } from "@/app/(ui)/(buyer)/_lib/BoardFilter";
+import { CategoryChips } from "@/app/(ui)/(buyer)/_lib/CategoryChips";
 
 interface Lane { on_fire: BoardCard[]; new: BoardCard[]; gone: BoardCard[] }
 interface Board { local: Lane; maker: Lane; digital: Lane }
@@ -69,6 +70,8 @@ function BoardView() {
         <h1 className="board-title">The board</h1>
         {cold && <span className="muted">New market. Sorted by distance.</span>}
       </div>
+
+      <CategoryChips activeId={tag?.id ?? null} onPick={setTag} onClear={() => setTag(null)} />
 
       {filter}
 

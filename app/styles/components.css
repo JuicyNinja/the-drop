@@ -664,3 +664,37 @@
 .wt-title { font-family: var(--font-display); font-weight: 800; font-size: var(--t-xl); line-height: 1.1; color: var(--ink); }
 .wt-body { font-size: var(--t-base); color: var(--grey); }
 .wt-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); margin-top: var(--s-2); }
+
+/* ===================== CATEGORY CHIPS (§15.2 tile grammar) ============= */
+/* Group-level browse furniture: a generated group tile with the category name
+   as a CSS label in the lower-third quiet zone (§15.2.2), backed by the group's
+   ground token (§15.2.1 rank-2). Horizontal scroll strip, ~160x90 per chip. */
+.cat-chips {
+  display: flex; gap: var(--s-3); overflow-x: auto; margin-bottom: var(--s-4);
+  padding-bottom: var(--s-2); scroll-snap-type: x proximity;
+}
+.cat-chip {
+  position: relative; flex: 0 0 auto; width: 160px; height: 90px; padding: 0; border: none;
+  border-radius: var(--r-tile); overflow: hidden; cursor: pointer; background: var(--hall-sunk);
+  box-shadow: var(--sh-tile); scroll-snap-align: start;
+}
+.cat-chip-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cat-chip-label {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 33.33%;
+  display: flex; align-items: center; padding: 0 var(--s-3);
+  font-family: var(--font-ui); font-weight: 700; font-size: var(--t-xs); line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+.cat-chip-active { outline: 3px solid var(--ink); outline-offset: -3px; }
+.cat-chip-active .cat-chip-label { font-weight: 800; }
+
+/* The 9 grounds (§15.3): label backing + contrast-safe text. */
+.chip-ground-orange { background: var(--g-orange); color: #fff; }
+.chip-ground-oxide  { background: var(--g-oxide);  color: #fff; }
+.chip-ground-steel  { background: var(--g-steel);  color: #fff; }
+.chip-ground-teal   { background: var(--g-teal);   color: #fff; }
+.chip-ground-moss   { background: var(--g-moss);   color: #fff; }
+.chip-ground-amber  { background: var(--g-amber);  color: var(--ink); }
+.chip-ground-blush  { background: var(--g-blush);  color: var(--ink); }
+.chip-ground-mint   { background: var(--g-mint);   color: var(--ink); }
+.chip-ground-bone   { background: var(--g-bone);   color: var(--ink); }

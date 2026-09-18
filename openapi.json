@@ -5234,8 +5234,17 @@
                 "id": {
                   "type": "string"
                 },
+                "slug": {
+                  "type": "string"
+                },
                 "label": {
                   "type": "string"
+                },
+                "ground_hex": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "leaves": {
                   "type": "array",
@@ -5262,7 +5271,9 @@
               },
               "required": [
                 "id",
+                "slug",
                 "label",
+                "ground_hex",
                 "leaves"
               ]
             }

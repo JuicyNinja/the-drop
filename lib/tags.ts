@@ -37,7 +37,9 @@ export async function searchTags(q: string, lane?: string, limit = 10): Promise<
 
 export interface TagGroup {
   id: string;
+  slug: string;
   label: string;
+  ground_hex: string | null;
   leaves: { id: string; label: string; slug: string }[];
 }
 
@@ -49,7 +51,7 @@ export async function getTagTree(lane?: string): Promise<TagGroup[]> {
   const svc = getServiceClient();
   const { data, error } = await svc
     .from("tags")
-    .select("id, parent_id, slug, label, lanes, selectable, sort_order")
+    .select("id, parent_id, slug, label, ground_hex, lanes, selectable, sort_order")
     .eq("active", true)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(`load tags failed: ${error.message}`);
@@ -57,7 +59,10 @@ export async function getTagTree(lane?: string): Promise<TagGroup[]> {
 
   const groups = rows.filter((r) => r.parent_id === null);
   const groupById = new Map<string, TagGroup>();
-  for (const g of groups) groupById.set(g.id as string, { id: g.id as string, label: g.label as string, leaves: [] });
+  for (const g of groups) groupById.set(g.id as string, {
+    id: g.id as string, slug: g.slug as string, label: g.label as string,
+    ground_hex: (g.ground_hex as string | null) ?? null, leaves: [],
+  });
 
   for (const leaf of rows) {
     if (leaf.parent_id === null) continue;

@@ -52,6 +52,18 @@
   /* pressed edge for the Catch key (§8) */
   --signal-edge: #c94a04;
 
+  /* 15.3 Category tile grounds — 9 grounds, owned by the group (never per-leaf).
+     These back the CSS category label; the tile photo carries the same color. */
+  --g-orange: #f25c05;
+  --g-amber:  #f5b428;
+  --g-oxide:  #c0271a;
+  --g-steel:  #2e5a78;
+  --g-teal:   #1e7a6f;
+  --g-moss:   #5e7444;
+  --g-blush:  #e4826e;
+  --g-mint:   #58b89c;
+  --g-bone:   #ede6d8;
+
   /* 2.2 Type scale — base 16, ratio 1.25 with a display jump */
   --t-xs: 0.75rem;
   --t-sm: 0.875rem;
