@@ -513,4 +513,143 @@ Ship as `app/styles/tokens.css`, imported once at root. **No component may hardc
 
 ---
 
+---
+
+## 15. TILE GRAMMAR
+
+Merchants do not supply photography and do not write prompts. The system generates tile imagery from the drop record and a category template. This section is what keeps 600 merchants' worth of content looking like one product.
+
+Treat this with the same standing as the color tokens. A prompt tuned for one category in isolation is how the board stops matching itself.
+
+### 15.1 Two tile types
+
+| Type | Purpose | Composition |
+|---|---|---|
+| **Drop tile** | The merchant's actual offer, on the drop card | **One subject.** Weighted to one third, negative space held opposite for the coupon print. |
+| **Category tile** | Browse furniture — group chips and leaf filters | **Dense flat-lay.** Six to eight items in a loose grid, filling the frame edge to edge. |
+
+A category tile shows range. A drop tile shows one thing. Never blend them.
+
+### 15.2 Fixed grammar — every tile, both types
+
+- 16:9
+- **Shot straight down from directly above** (flat-lay style) or **straight on** (result style). Never a dramatic angle. This removes the question of what the room behind the product looks like — a taqueria's actual kitchen never appears.
+- **Flat solid color ground**, edge to edge, no texture, no gradient, no vignette
+- Bright even studio light. Soft contact shadow only — **no dramatic or raking light**
+- **The lower third is a reserved quiet zone.** Composition stays calm there; the label sits on it.
+- No text, no logos, no faces, no hands
+- No props, no styling, no clutter. Ground visible between items.
+- Cheerful, punchy, contemporary
+
+The flat ground does the work. It makes unrelated subjects read as siblings, it survives being shrunk to 200px because there is no fine detail to lose, and it is the one variable the platform fully controls.
+
+### 15.2.1 Navigation hierarchy — DOCTRINE
+
+A category tile is **navigation furniture**, not a photograph. Three jobs, in strict priority:
+
+| Rank | Element | Job |
+|---|---|---|
+| 1 | **Ground color** | Recognition. Orange means food before anything is read. |
+| 2 | **CSS label** | Navigation. Says exactly where this goes. |
+| 3 | **Photography** | Appeal only. Carries **zero** navigational load. |
+
+**Photography must never make it harder to tell where to tap.** If a tile is visually rich and navigationally ambiguous, it has failed regardless of how good it looks.
+
+**The blur test:** blur a tile until the items are unreadable. If you can still tell food from auto from retail, it passes. If you cannot, the ground color is wrong — not the photograph.
+
+At mobile a category chip is roughly 160×90. Nothing inside the image is legible at that size and nothing is expected to be. Density is safe as long as the ground stays visible between items and the quiet zone holds.
+
+### 15.2.2 Labels are CSS, never generated
+
+The category name is a **real DOM element overlaid on the tile.** It is never generated into the image.
+
+Generated text at 200px tall is illegible and misspells; a renamed category would mean regenerating a $0.06 asset; and generated type cannot be translated, selected, or read by a screen reader. A CSS label is crisp at every size, free to change, and accessible.
+
+The tile is the ground. The label sits on it.
+
+### 15.2.3 Four tile styles
+
+Set per leaf as `tile_style` on the taxonomy row. Assigned deliberately, never inferred from the group.
+
+| Style | Use | Composition |
+|---|---|---|
+| `flatlay` | Products — food, retail, goods | Six to eight items, loose grid, edge to edge |
+| `result` | Services — the finished state, not the tools | The outcome, shot straight on. Spotless glass, pressed shirts, a cut lawn. **Never the equipment.** |
+| `transformation` | Services where the change is the product | Before and after in one frame, hard edge between. Pressure washing, detailing, carpet, tile and grout. |
+| `result-from-behind` | Personal services — the result lives on a person, and §15.2 forbids faces | The finished result shot from directly behind or cropped so no face appears: a fresh fade from the back, a hand with finished nails. **No eyes, never a face.** |
+
+Roughly 200 of the 454 leaves are services. Nobody wants to look at squeegees — they want the gleaming window. `result` and `transformation` exist because a flat-lay of tools says nothing about what the customer is buying, and `result-from-behind` exists because the best proof for a haircut or a manicure is the person wearing it — which the no-faces rule (§15.2) otherwise rules out. Behind, or cropped to the hands, keeps both.
+
+### 15.3 Ground colors — 24 groups, 9 grounds
+
+Colors belong to the **group**. Every leaf inherits its parent's ground unchanged. Per-leaf tints are forbidden — 454 shades reads as overdone and destroys color as wayfinding.
+
+```css
+--g-orange: #F25C05;   --g-amber:  #F5B428;   --g-oxide: #C0271A;
+--g-steel:  #2E5A78;   --g-teal:   #1E7A6F;   --g-moss:  #5E7444;
+--g-blush:  #E4826E;   --g-mint:   #58B89C;   --g-bone:  #EDE6D8;
+```
+
+| Ground | Groups |
+|---|---|
+| `--g-orange` | Food & Drink · Grocery & Specialty Food |
+| `--g-amber` | Coffee & Bakery · Kids & Family |
+| `--g-oxide` | Bars & Nightlife · Entertainment |
+| `--g-steel` | Auto · Professional Services |
+| `--g-teal` | Home Services · Home Improvement |
+| `--g-moss` | Outdoor & Yard · Activities & Outdoors · Pets |
+| `--g-blush` | Personal Care · Retail — Apparel · Events & Celebrations |
+| `--g-mint` | Health & Wellness · Fitness · Travel & Stays |
+| `--g-bone` | Jewelry & Accessories · Retail — Home & Lifestyle · Retail — Gear & Hobby · Education & Lessons · Digital & Creative |
+
+Ground color is stored on the `tags` group row, not hardcoded in a prompt template.
+
+### 15.4 Prompt assembly
+
+Assembled server-side from three parts. The merchant contributes only the subject, and contributes it by describing their offer in plain words — never by writing a prompt.
+
+```
+[type clause]  →  drop tile: one subject, left third, empty right
+                  category tile: dense grid, six to eight items, edge to edge
+
+[subject]      →  from the drop record, or the leaf's item list for a category tile
+
+[ground]       →  the group's ground color
+
+[fixed grammar] → §15.2, appended verbatim, never edited per request
+```
+
+The fixed grammar block is a constant. Any change to it changes every tile in the product and is a design decision, not a tuning pass.
+
+### 15.5 Subject weighting
+
+Drop tiles alternate left- and right-weighted by drop ID, with the type block flipping to match. Uniform left-weighting is consistency bought at the cost of rhythm — the board needs variation inside the grammar, not outside it.
+
+### 15.6 Model and cost
+
+**Ideogram 4.0** (`ideogram:4@0`), ~$0.06 per tile at 2560×1440.
+
+| Asset | Volume | Cost |
+|---|---|---|
+| Category tiles — 24 groups + 454 leaves | 478, **one time** | ~$29 |
+| Drop tiles | Recurring, per drop | $0.06 each |
+
+Category tiles are generated once and stored. Only drop tiles recur, so that is the only place generation volume becomes a business decision — **cap generations per drop** rather than letting a merchant regenerate without limit.
+
+Photo-realistic models (Juggernaut Z, FLUX.1 + Photo LoRA) cost ~20× less and are viable for drop tiles where no graphic treatment is needed. Evaluate per category; do not mix models within a category.
+
+### 15.7 Explicitly rejected
+
+| Rejected | Why |
+|---|---|
+| Dramatic raking light, deep shadow, cinematic falloff | Fights the near-white hall. Tiles sit on light, not on dark. |
+| Generated type of any kind inside a tile | Illegible at 200px, misspells, cannot be renamed, translated, selected, or read aloud. Labels are CSS. |
+| Per-leaf color tints | 454 shades reads as overdone and destroys color as wayfinding. |
+| Merchant-written prompts | The grammar is the product. Merchant-authored prompts are how the board becomes a classifieds page. |
+| Photographs of service equipment | A squeegee is not what the customer is buying. Show the clean window. |
+| Photography that competes with navigation | A tile that is visually rich and navigationally ambiguous has failed. See §15.2.1. |
+| Generated imagery on Maker Drop (Phase 2) | A generated image of a physical object bought sight unseen is a returns and chargeback magnet. Local only. |
+
+---
+
 *The board is the object. The page is the hall. The flip is the only loud thing.*
