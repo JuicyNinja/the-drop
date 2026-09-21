@@ -37,7 +37,8 @@ export async function resolveActiveMarket(userId: string): Promise<ActiveMarket 
 
   let nearest: ActiveMarket["nearest_city"] = null;
   if (center) {
-    const { data: cities } = await svc.from("cities").select("id, name, region, lat, lng");
+    const { data: cities, error: citiesErr } = await svc.from("cities").select("id, name, region, lat, lng");
+    if (citiesErr) throw new Error(`nearest-city query failed: ${citiesErr.message}`);
     let best = Infinity;
     for (const c of cities ?? []) {
       const d = distanceMiles(center, { lat: c.lat as number, lng: c.lng as number });

@@ -61,11 +61,17 @@ interface CatchContext {
 
 /** Drop title + position for an SMS body. Best-effort; never blocks a send. */
 async function catchContext(catchId: string): Promise<CatchContext> {
-  const { data } = await getServiceClient()
+  const { data, error } = await getServiceClient()
     .from("catches")
     .select("position_number, drops!inner(title)")
     .eq("id", catchId)
     .maybeSingle();
+  // Best-effort SMS-body context (called post-commit): a real error is LOGGED,
+  // not swallowed as "no data" and not thrown — the transfer must not fail here.
+  if (error) {
+    console.error("[transfer] catch context lookup failed (non-fatal)", error.message);
+    return { drop_title: "a drop", position_number: 0 };
+  }
   const drop = data?.drops as unknown as { title: string } | undefined;
   return {
     drop_title: drop?.title ?? "a drop",
@@ -74,12 +80,14 @@ async function catchContext(catchId: string): Promise<CatchContext> {
 }
 
 async function phoneOf(userId: string): Promise<string | null> {
-  const { data } = await getServiceClient().from("users").select("phone").eq("id", userId).maybeSingle();
+  const { data, error } = await getServiceClient().from("users").select("phone").eq("id", userId).maybeSingle();
+  if (error) { console.error("[transfer] phone lookup failed (non-fatal)", error.message); return null; }
   return (data?.phone as string | null) ?? null;
 }
 
 async function handleOf(userId: string): Promise<string> {
-  const { data } = await getServiceClient().from("users").select("handle").eq("id", userId).maybeSingle();
+  const { data, error } = await getServiceClient().from("users").select("handle").eq("id", userId).maybeSingle();
+  if (error) { console.error("[transfer] handle lookup failed (non-fatal)", error.message); return "someone"; }
   return (data?.handle as string | null) ?? "someone";
 }
 
@@ -178,7 +186,8 @@ export async function createTransfer(
   if (tErr) {
     // Roll the catch back to held: we acquired it but failed to record the
     // transfer, so it must not be stranded in transfer_pending.
-    await svc.from("catches").update({ status: "held" }).eq("id", catchId).eq("status", "transfer_pending");
+    const { error: rbErr } = await svc.from("catches").update({ status: "held" }).eq("id", catchId).eq("status", "transfer_pending");
+    if (rbErr) throw new Error(`create transfer failed: ${tErr.message}; rollback also failed (catch stranded transfer_pending): ${rbErr.message}`);
     throw new Error(`create transfer failed: ${tErr.message}`);
   }
 
@@ -291,7 +300,8 @@ export async function declineTransfer(
 
   const catchId = won[0].catch_id as string;
   // Return to the original holder (user_id was never changed on send).
-  await svc.from("catches").update({ status: "held" }).eq("id", catchId).eq("status", "transfer_pending");
+  const { error: relErr } = await svc.from("catches").update({ status: "held" }).eq("id", catchId).eq("status", "transfer_pending");
+  if (relErr) throw new Error(`return declined catch to holder failed (catch stranded transfer_pending): ${relErr.message}`);
 
   const ctx = await catchContext(catchId);
   await notify(
@@ -335,23 +345,25 @@ export async function listIncoming(userId: string, now: Date = new Date()): Prom
  */
 async function expireOnePending(transferId: string, now: Date): Promise<void> {
   const svc = getServiceClient();
-  const { data: won } = await svc
+  const { data: won, error: wErr } = await svc
     .from("transfers")
     .update({ status: "expired", resolved_at: now.toISOString() })
     .eq("id", transferId)
     .eq("status", "pending")
     .lte("accept_by", now.toISOString())
     .select("catch_id");
+  if (wErr) throw new Error(`expire-one transfer claim failed: ${wErr.message}`);
   if (won && won.length > 0) {
     // Only return the catch to the sender if its redemption window is still
     // open; if closed, leave it for the void pass (it will be expired, not
     // handed back as a live held catch).
-    await svc
+    const { error: cErr } = await svc
       .from("catches")
       .update({ status: "held" })
       .eq("id", won[0].catch_id as string)
       .eq("status", "transfer_pending")
       .gt("expires_at", now.toISOString());
+    if (cErr) throw new Error(`return expired catch to sender failed: ${cErr.message}`);
   }
 }
 
@@ -389,15 +401,17 @@ export async function runTransferSweep(now: Date = new Date()): Promise<SweepRes
     .lte("catches.expires_at", nowIso);
   if (vErr) throw new Error(`sweep void query failed: ${vErr.message}`);
   for (const t of voidCandidates ?? []) {
-    const { data: won } = await svc
+    const { data: won, error: wErr } = await svc
       .from("transfers")
       .update({ status: "voided", resolved_at: nowIso })
       .eq("id", t.id as string)
       .eq("status", "pending")
       .select("catch_id");
+    if (wErr) throw new Error(`sweep void claim failed: ${wErr.message}`);
     if (won && won.length > 0) {
       // Catch dies with the window. transfer_pending → expired (no return path).
-      await svc.from("catches").update({ status: "expired" }).eq("id", won[0].catch_id as string).eq("status", "transfer_pending");
+      const { error: cErr } = await svc.from("catches").update({ status: "expired" }).eq("id", won[0].catch_id as string).eq("status", "transfer_pending");
+      if (cErr) throw new Error(`sweep void catch update failed: ${cErr.message}`);
       voided.push(t.id as string);
     }
   }
@@ -410,17 +424,19 @@ export async function runTransferSweep(now: Date = new Date()): Promise<SweepRes
     .lte("accept_by", nowIso);
   if (eErr) throw new Error(`sweep expire query failed: ${eErr.message}`);
   for (const t of expireCandidates ?? []) {
-    const { data: won } = await svc
+    const { data: won, error: wErr } = await svc
       .from("transfers")
       .update({ status: "expired", resolved_at: nowIso })
       .eq("id", t.id as string)
       .eq("status", "pending")
       .select("catch_id, from_user_id");
+    if (wErr) throw new Error(`sweep expire claim failed: ${wErr.message}`);
     if (won && won.length > 0) {
       // Return to the original holder (user_id unchanged), never to inventory.
       // No SMS here: the contract lists SMS on send/accept/decline only (a
       // deliberate scope decision, recorded in the report).
-      await svc.from("catches").update({ status: "held" }).eq("id", won[0].catch_id as string).eq("status", "transfer_pending");
+      const { error: cErr } = await svc.from("catches").update({ status: "held" }).eq("id", won[0].catch_id as string).eq("status", "transfer_pending");
+      if (cErr) throw new Error(`sweep return expired catch to sender failed: ${cErr.message}`);
       expired.push(t.id as string);
     }
   }

@@ -122,26 +122,31 @@ async function resolveMissingCities(
   async function cityForLocations(locIds: string[]): Promise<void> {
     const missing = locIds.filter((id) => !locCity.has(id));
     if (missing.length === 0) return;
-    const { data } = await svc.from("locations").select("id, city_id").in("id", missing);
+    const { data, error } = await svc.from("locations").select("id, city_id").in("id", missing);
+    if (error) throw new Error(`clout city-for-locations failed: ${error.message}`);
     for (const r of data ?? []) locCity.set(r.id as string, (r.city_id as string | null) ?? null);
   }
 
   if (idsByType.redemption.size > 0) {
-    const { data } = await svc.from("redemptions").select("id, location_id").in("id", [...idsByType.redemption]);
+    const { data, error } = await svc.from("redemptions").select("id, location_id").in("id", [...idsByType.redemption]);
+    if (error) throw new Error(`clout redemption cities failed: ${error.message}`);
     await cityForLocations((data ?? []).map((r) => r.location_id as string));
     for (const r of data ?? []) { const c = locCity.get(r.location_id as string); if (c) out.set(r.id as string, c); }
   }
   if (idsByType.whisper.size > 0) {
-    const { data } = await svc.from("whispers").select("id, location_id").in("id", [...idsByType.whisper]);
+    const { data, error } = await svc.from("whispers").select("id, location_id").in("id", [...idsByType.whisper]);
+    if (error) throw new Error(`clout whisper cities failed: ${error.message}`);
     await cityForLocations((data ?? []).map((r) => r.location_id as string));
     for (const r of data ?? []) { const c = locCity.get(r.location_id as string); if (c) out.set(r.id as string, c); }
   }
   if (idsByType.share.size > 0) {
-    const { data } = await svc.from("share_links").select("id, drop_id").in("id", [...idsByType.share]);
+    const { data, error } = await svc.from("share_links").select("id, drop_id").in("id", [...idsByType.share]);
+    if (error) throw new Error(`clout share drops failed: ${error.message}`);
     const dropIds = (data ?? []).map((r) => r.drop_id as string);
     const dropCity = new Map<string, string | null>();
     if (dropIds.length > 0) {
-      const { data: drops } = await svc.from("drops").select("id, city_id").in("id", dropIds);
+      const { data: drops, error: dErr } = await svc.from("drops").select("id, city_id").in("id", dropIds);
+      if (dErr) throw new Error(`clout share drop cities failed: ${dErr.message}`);
       for (const d of drops ?? []) dropCity.set(d.id as string, (d.city_id as string | null) ?? null);
     }
     for (const r of data ?? []) { const c = dropCity.get(r.drop_id as string); if (c) out.set(r.id as string, c); }
@@ -187,10 +192,11 @@ export async function recomputeAllClout(now: Date = new Date()): Promise<CloutRe
   // Events on/after clout_frozen_at are ignored here — the ledger is never
   // mutated (invariant #6), decay still applies to what accrued before, and
   // lifting the freeze (null) restores full accrual on the next recompute.
-  const { data: frozenUsers } = await svc
+  const { data: frozenUsers, error: frozenErr } = await svc
     .from("users")
     .select("id, clout_frozen_at")
     .not("clout_frozen_at", "is", null);
+  if (frozenErr) throw new Error(`clout freeze read failed: ${frozenErr.message}`);
   const frozenAt = new Map<string, number>();
   for (const f of frozenUsers ?? []) {
     frozenAt.set(f.id as string, new Date(f.clout_frozen_at as string).getTime());

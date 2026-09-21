@@ -36,12 +36,13 @@ export async function listFollows(userId: string): Promise<FollowRecord[]> {
 }
 
 async function fanaticsInLane(userId: string, lane: string): Promise<{ org_id: string; name: string }[]> {
-  const { data } = await getServiceClient()
+  const { data, error } = await getServiceClient()
     .from("follows")
     .select("org_id, organizations!inner(name)")
     .eq("user_id", userId)
     .eq("lane", lane)
     .eq("tier", "fanatic");
+  if (error) throw new Error(`fanatics-in-lane load failed: ${error.message}`);
   return (data ?? []).map((r) => ({ org_id: r.org_id as string, name: (r.organizations as unknown as { name: string }).name }));
 }
 

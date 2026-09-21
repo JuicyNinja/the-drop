@@ -66,7 +66,9 @@ export async function recordClick(token: string): Promise<{ drop_id: string } | 
     .maybeSingle();
   if (error) throw new Error(`load share failed: ${error.message}`);
   if (!data) return null;
-  await svc.from("share_links").update({ click_count: (data.click_count as number) + 1 }).eq("id", data.id as string);
+  // click_count is a metric; a failure is logged, never fatal to the redirect.
+  const { error: incErr } = await svc.from("share_links").update({ click_count: (data.click_count as number) + 1 }).eq("id", data.id as string);
+  if (incErr) console.error("[shares] click_count increment failed (non-fatal)", incErr.message);
   return { drop_id: data.drop_id as string };
 }
 
@@ -109,7 +111,8 @@ export async function verifyReturn(callerId: string, token: string): Promise<Ver
   if (!won || won.length === 0) return { attributed: false, reason: "already_verified" };
 
   // City for the clout leaderboard is the shared drop's city.
-  const { data: drop } = await svc.from("drops").select("city_id").eq("id", share.drop_id as string).maybeSingle();
+  const { data: drop, error: dErr } = await svc.from("drops").select("city_id").eq("id", share.drop_id as string).maybeSingle();
+  if (dErr) throw new Error(`load shared drop city failed: ${dErr.message}`);
   const cloutEarned = await recordShareClout(share.user_id as string, (drop?.city_id as string | null) ?? null, share.id as string);
   return { attributed: true, clout_earned: cloutEarned };
 }

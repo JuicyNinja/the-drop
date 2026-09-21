@@ -73,10 +73,11 @@ async function prefsFor(userIds: string[]): Promise<Map<string, Prefs>> {
   // leaving the overflow users on DEFAULT_PREFS (and possibly notified against a
   // disabled channel). One batch per ≤1000 ids returns ≤1000 rows, never capped.
   for (const ids of chunk(userIds)) {
-    const { data } = await svc
+    const { data, error } = await svc
       .from("notification_prefs")
       .select("user_id, push_enabled, email_enabled, sms_enabled, digest_hour_local")
       .in("user_id", ids);
+    if (error) throw new Error(`load notification prefs failed: ${error.message}`);
     for (const r of data ?? []) {
       out.set(r.user_id as string, {
         push: r.push_enabled as boolean, email: r.email_enabled as boolean,
@@ -122,7 +123,8 @@ async function enqueue(rows: Row[]): Promise<number> {
 // ---------------------------------------------------------------------------
 export async function enqueueDropLive(dropId: string): Promise<{ enqueued: number }> {
   const svc = getServiceClient();
-  const { data: drop } = await svc.from("drops").select("id, org_id, location_id, title").eq("id", dropId).maybeSingle();
+  const { data: drop, error: dropErr } = await svc.from("drops").select("id, org_id, location_id, title").eq("id", dropId).maybeSingle();
+  if (dropErr) throw new Error(`drop-live load drop failed: ${dropErr.message}`);
   if (!drop) return { enqueued: 0 };
   const orgId = drop.org_id as string;
   const title = drop.title as string;
@@ -138,7 +140,8 @@ export async function enqueueDropLive(dropId: string): Promise<{ enqueued: numbe
   const following = new Set([...fanatics, ...followers]);
 
   // Category matches: users whose selected tags intersect the org's tags.
-  const { data: orgTags } = await svc.from("org_tags").select("tag_id").eq("org_id", orgId);
+  const { data: orgTags, error: otErr } = await svc.from("org_tags").select("tag_id").eq("org_id", orgId);
+  if (otErr) throw new Error(`drop-live org tags failed: ${otErr.message}`);
   const tagIds = (orgTags ?? []).map((t) => t.tag_id as string);
   const categoryUsers = new Set<string>();
   if (tagIds.length > 0) {
@@ -151,7 +154,8 @@ export async function enqueueDropLive(dropId: string): Promise<{ enqueued: numbe
   // location. (v1 computes in JS over active addresses; a spatial query is the
   // production optimization — the addresses_geo GIST index exists for it.)
   if (drop.location_id) {
-    const { data: loc } = await svc.from("locations").select("lat, lng").eq("id", drop.location_id as string).maybeSingle();
+    const { data: loc, error: locErr } = await svc.from("locations").select("lat, lng").eq("id", drop.location_id as string).maybeSingle();
+    if (locErr) throw new Error(`drop-live location load failed: ${locErr.message}`);
     if (loc && loc.lat !== null && loc.lng !== null) {
       const here = { lat: Number(loc.lat), lng: Number(loc.lng) };
       // Global scan over every address, paged past the 1000-row cap. The users
@@ -204,13 +208,14 @@ export async function enqueueWindowClosing(now: Date = new Date()): Promise<{ en
   const svc = getServiceClient();
   const horizon = new Date(now.getTime() + WINDOW_CLOSING_LEAD_MS).toISOString();
   // Live/gone drops whose redemption window closes within the lead time.
-  const { data: drops } = await svc
+  const { data: drops, error: dErr } = await svc
     .from("drops")
     .select("id, title, redeem_until")
     .in("status", ["live", "gone"])
     .not("redeem_until", "is", null)
     .gt("redeem_until", now.toISOString())
     .lte("redeem_until", horizon);
+  if (dErr) throw new Error(`window-closing drops query failed: ${dErr.message}`);
   const rows: Row[] = [];
   for (const d of drops ?? []) {
     const dropId = d.id as string;
@@ -252,7 +257,8 @@ export async function enqueueNearlyGone(now: Date = new Date()): Promise<{ enque
     // result and under-detect catchers, over-notifying them.
     const caught = new Set<string>();
     for (const ids of chunk(audience)) {
-      const { data: caughtRows } = await svc.from("catches").select("original_user_id").eq("drop_id", dropId).in("original_user_id", ids);
+      const { data: caughtRows, error: cErr } = await svc.from("catches").select("original_user_id").eq("drop_id", dropId).in("original_user_id", ids);
+      if (cErr) throw new Error(`nearly-gone caught lookup failed: ${cErr.message}`);
       for (const c of caughtRows ?? []) caught.add(c.original_user_id as string);
     }
     const uncaught = audience.filter((u) => !caught.has(u));
@@ -312,7 +318,8 @@ export async function enqueueDigests(now: Date = new Date()): Promise<{ enqueued
     // else the launch-market default. Never UTC.
     let tz = (u.timezone as string | null) ?? null;
     if (!tz && u.active_address_id) {
-      const { data: addr } = await svc.from("addresses").select("lat, lng").eq("id", u.active_address_id as string).maybeSingle();
+      const { data: addr, error: addrErr } = await svc.from("addresses").select("lat, lng").eq("id", u.active_address_id as string).maybeSingle();
+      if (addrErr) throw new Error(`digest address timezone lookup failed: ${addrErr.message}`);
       if (addr?.lat != null && addr?.lng != null) tz = await resolveTimezone(Number(addr.lat), Number(addr.lng));
     }
     tz = tz ?? DEFAULT_TIMEZONE;
@@ -330,26 +337,29 @@ export interface DispatchResult { sent: number; failed: number; skipped: number 
 
 export async function dispatchPending(limit = 500): Promise<DispatchResult> {
   const svc = getServiceClient();
-  const { data: pending } = await svc
+  const { data: pending, error: pendErr } = await svc
     .from("notifications")
     .select("id, user_id, kind, channel, payload")
     .is("sent_at", null)
     .order("created_at", { ascending: true })
     .limit(limit);
+  if (pendErr) throw new Error(`dispatch pending query failed: ${pendErr.message}`);
 
   let sent = 0, failed = 0, skipped = 0;
   for (const n of pending ?? []) {
     const id = n.id as string;
     // CLAIM: atomically take the row so a concurrent/retried dispatcher cannot
     // also send it. Only the winner proceeds.
-    const { data: claimed } = await svc.from("notifications").update({ sent_at: new Date().toISOString() }).eq("id", id).is("sent_at", null).select("id");
+    const { data: claimed, error: claimErr } = await svc.from("notifications").update({ sent_at: new Date().toISOString() }).eq("id", id).is("sent_at", null).select("id");
+    if (claimErr) throw new Error(`dispatch claim failed for ${id}: ${claimErr.message}`);
     if (!claimed || claimed.length === 0) { skipped++; continue; }
     try {
       await deliver(n.user_id as string, n.channel as Channel, n.payload as Record<string, unknown>);
       sent++;
     } catch (e) {
       // Delivery failed — release the claim so a later dispatch retries it.
-      await svc.from("notifications").update({ sent_at: null }).eq("id", id);
+      const { error: relErr } = await svc.from("notifications").update({ sent_at: null }).eq("id", id);
+      if (relErr) console.error(`[notifications] release claim after delivery failure also failed for ${id}`, relErr.message);
       failed++;
       console.error(`[notifications] dispatch failed for ${id}`, e instanceof Error ? e.message : e);
     }
@@ -360,7 +370,8 @@ export async function dispatchPending(limit = 500): Promise<DispatchResult> {
 async function deliver(userId: string, channel: Channel, payload: Record<string, unknown>): Promise<void> {
   if (channel === "in_app") return; // delivered by existing as a queryable row
   const svc = getServiceClient();
-  const { data: user } = await svc.from("users").select("email, phone").eq("id", userId).maybeSingle();
+  const { data: user, error: userErr } = await svc.from("users").select("email, phone").eq("id", userId).maybeSingle();
+  if (userErr) throw new Error(`deliver recipient lookup failed: ${userErr.message}`);
   const title = (payload.title as string) ?? "The Drop";
   const body = messageFor(payload);
   if (channel === "email") {
@@ -368,7 +379,8 @@ async function deliver(userId: string, channel: Channel, payload: Record<string,
   } else if (channel === "sms") {
     if (user?.phone) await getSmsSender().send(user.phone as string, body);
   } else if (channel === "push") {
-    const { data: subs } = await svc.from("push_subscriptions").select("endpoint, keys").eq("user_id", userId);
+    const { data: subs, error: subsErr } = await svc.from("push_subscriptions").select("endpoint, keys").eq("user_id", userId);
+    if (subsErr) throw new Error(`deliver push subscriptions failed: ${subsErr.message}`);
     for (const s of subs ?? []) {
       await getPushSender().send({ endpoint: s.endpoint as string, keys: s.keys as WebPushSubscription["keys"] }, { title, body });
     }
@@ -381,7 +393,8 @@ async function deliver(userId: string, channel: Channel, payload: Record<string,
 export interface NotificationPrefs { push_enabled: boolean; email_enabled: boolean; sms_enabled: boolean; digest_hour_local: number }
 
 export async function getPrefs(userId: string): Promise<NotificationPrefs> {
-  const { data } = await getServiceClient().from("notification_prefs").select("push_enabled, email_enabled, sms_enabled, digest_hour_local").eq("user_id", userId).maybeSingle();
+  const { data, error } = await getServiceClient().from("notification_prefs").select("push_enabled, email_enabled, sms_enabled, digest_hour_local").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error(`load notification prefs failed: ${error.message}`);
   return {
     push_enabled: (data?.push_enabled as boolean) ?? DEFAULT_PREFS.push,
     email_enabled: (data?.email_enabled as boolean) ?? DEFAULT_PREFS.email,

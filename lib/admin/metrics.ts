@@ -37,9 +37,12 @@ export async function getPlatformMetrics(): Promise<PlatformMetrics> {
   const catches = await countOf("catches");
   const redemptions = await countOf("redemptions");
 
-  const { count: orgsActive } = await svc.from("organizations").select("id", { count: "exact", head: true }).eq("status", "active");
-  const { count: dropsLive } = await svc.from("drops").select("id", { count: "exact", head: true }).eq("status", "live");
-  const { count: citiesLaunched } = await svc.from("cities").select("id", { count: "exact", head: true }).eq("active", true);
+  const { count: orgsActive, error: orgsErr } = await svc.from("organizations").select("id", { count: "exact", head: true }).eq("status", "active");
+  if (orgsErr) throw new Error(`metrics active orgs count failed: ${orgsErr.message}`);
+  const { count: dropsLive, error: dropsErr } = await svc.from("drops").select("id", { count: "exact", head: true }).eq("status", "live");
+  if (dropsErr) throw new Error(`metrics live drops count failed: ${dropsErr.message}`);
+  const { count: citiesLaunched, error: citiesErr } = await svc.from("cities").select("id", { count: "exact", head: true }).eq("active", true);
+  if (citiesErr) throw new Error(`metrics launched cities count failed: ${citiesErr.message}`);
 
   // Demand map: aggregate saved addresses by city, with a centroid for plotting.
   const { data: addrs, error: aErr } = await svc.from("addresses").select("city, region, lat, lng").limit(100000);
