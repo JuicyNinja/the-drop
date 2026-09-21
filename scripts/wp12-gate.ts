@@ -186,6 +186,34 @@ async function main(): Promise<void> {
   );
 
   // ========================================================================
+  // GATE 4b — RADIUS MATCHING produces recipients. The routing checks above prove
+  // a matched user is emailed; they never proved matching itself. A user with NO
+  // follow and NO tag match, whose ACTIVE address is inside the drop's radius,
+  // must receive the discovery email — this is how a merchant with zero followers
+  // reaches nearby buyers (§9.2), and it was dead from WP-12 until the addresses
+  // embed was disambiguated.
+  // ========================================================================
+  const locXY = (await pg.query(`select lat, lng from locations where id=$1`, [loc])).rows[0] as { lat: number; lng: number };
+  const radU = await register(`w12rad_${stamp}@t.test`, `w12rd${stamp % 100000}`);
+  // Pin the fresh user's ACTIVE address onto the drop location, radius 5mi. No
+  // follow, no user_tags → the ONLY way they can match is radius.
+  await pg.query(
+    `update addresses set lat=$1, lng=$2, radius_miles=5 where id=(select active_address_id from users where id=$3)`,
+    [locXY.lat, locXY.lng, radU.uid],
+  );
+  const radFollows = Number((await pg.query(`select count(*)::int n from follows where user_id=$1`, [radU.uid])).rows[0].n);
+  const radTags = Number((await pg.query(`select count(*)::int n from user_tags where user_id=$1`, [radU.uid])).rows[0].n);
+  const radDrop = (await api("/v1/drops", { method: "POST", token: owner.token, body: { location_id: loc, title: "Radius Drop", description: "d", quantity_total: 5, live_at: iso(-2000), live_until: iso(864e5), redeem_from: iso(-1000), redeem_until: iso(864e5), publish: true } })).body.data.id;
+  await api("/v1/admin/scheduler/tick", { method: "POST", token: admin }); // go-live → enqueue drop-live
+  const radN = await notifs(radU.uid, "drop_live");
+  const radChans = chans(radN);
+  check(
+    "radius matching produces recipients: an active address inside the radius, with no follow and no tag, gets the discovery email",
+    radFollows === 0 && radTags === 0 && radN.length === 1 && radChans === "email",
+    `radius-only user (follows=${radFollows}, tags=${radTags}) drop_live channels = [${radChans}] for drop ${radDrop} (want: email)`,
+  );
+
+  // ========================================================================
   // GATE 5 — digest respects digest_hour_local, resolved against the user's IANA
   // TIMEZONE (not UTC). Same hour number in two zones → different outcomes.
   // ========================================================================

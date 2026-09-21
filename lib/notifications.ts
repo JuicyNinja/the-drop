@@ -154,20 +154,26 @@ export async function enqueueDropLive(dropId: string): Promise<{ enqueued: numbe
     const { data: loc } = await svc.from("locations").select("lat, lng").eq("id", drop.location_id as string).maybeSingle();
     if (loc && loc.lat !== null && loc.lng !== null) {
       const here = { lat: Number(loc.lat), lng: Number(loc.lng) };
-      // NOTE: this global address scan is deliberately NOT paged here. Its embed
-      // (`users!inner`) is pre-existingly ambiguous ("more than one relationship
-      // … for 'addresses' and 'users'"), so it returns null today and radius
-      // discovery is already inert — paging a query that always errors would only
-      // surface the error and break the whole fan-out. Kept error-tolerant exactly
-      // as before; fixing the embed (and then paging it) is a separate change.
-      const { data: addrs } = await svc.from("addresses").select("user_id, lat, lng, radius_miles, users!inner(active_address_id, id)");
-      for (const a of addrs ?? []) {
-        const u = a.users as unknown as { active_address_id: string | null; id: string };
-        // Only the user's ACTIVE address counts for discovery.
+      // Global scan over every address, paged past the 1000-row cap. The users
+      // embed is disambiguated to the OWNER FK (`addresses_user_id_fkey`) —
+      // `addresses` has two relationships to `users` (owner, and users.active_-
+      // address_id back to addresses), and a bare `users!inner` is ambiguous and
+      // errors. Only the owner's ACTIVE address counts for discovery (§9.2), so we
+      // keep an address only when it is that user's active_address_id.
+      const addrs = await fetchAllRows<{
+        id: string; user_id: string; lat: number | null; lng: number | null; radius_miles: number; users: unknown;
+      }>((from, to) =>
+        svc.from("addresses")
+          .select("id, user_id, lat, lng, radius_miles, users!addresses_user_id_fkey!inner(active_address_id)")
+          .range(from, to),
+      );
+      for (const a of addrs) {
+        // supabase-js types a to-one embed as an array; at runtime it is the object.
+        const owner = a.users as unknown as { active_address_id: string | null } | null;
         if (a.lat === null || a.lng === null) continue;
-        if (distanceMiles(here, { lat: Number(a.lat), lng: Number(a.lng) }) <= (a.radius_miles as number)) {
-          categoryUsers.add(a.user_id as string); // union of category + radius
-          void u;
+        if (a.id !== owner?.active_address_id) continue; // active address only
+        if (distanceMiles(here, { lat: Number(a.lat), lng: Number(a.lng) }) <= a.radius_miles) {
+          categoryUsers.add(a.user_id); // union of category + radius
         }
       }
     }
