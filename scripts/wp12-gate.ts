@@ -218,6 +218,39 @@ async function main(): Promise<void> {
     `both set digest_hour_local=${denverHour}: Denver user (local hour ${denverHour}) → digests=${denverDigest}; NY user (local hour ${nyHour}) → digests=${nyDigest}`,
   );
 
+  // ========================================================================
+  // GATE 6 — the digest scan pages past PostgREST's 1000-row cap. Seed 1100
+  // users who all match the current hour; every one must get a digest. Before
+  // the fix, enqueueDigests read only the first 1000 users and the overflow was
+  // silently skipped. Bulk-inserted by SQL (HTTP register would be far too slow).
+  // ========================================================================
+  const N = 1100;
+  const dtag = `w12scale_${stamp}`;
+  await pg.query(
+    `insert into auth.users (id, email)
+     select gen_random_uuid(), '${dtag}_' || g || '@t.test' from generate_series(1, $1) g`,
+    [N],
+  );
+  await pg.query(
+    `insert into users (id, email, full_name, handle, phone, phone_verified_at, timezone)
+     select id, email, 'Scale', 'w12s${stamp}_' || rn, '+1801' || lpad((2000000 + rn)::text, 7, '0'), now(), 'America/Denver'
+     from (select id, email, row_number() over (order by email) rn from auth.users where email like '${dtag}_%@t.test') a`,
+  );
+  await pg.query(
+    `insert into notification_prefs (user_id, push_enabled, email_enabled, sms_enabled, digest_hour_local)
+     select id, true, true, true, $1 from users where email like '${dtag}_%@t.test'`,
+    [denverHour],
+  );
+  await api("/v1/admin/notifications/digest", { method: "POST", token: admin });
+  const scaleDigests = (await pg.query(
+    `select count(*)::int n from notifications where kind='digest' and user_id in (select id from users where email like '${dtag}_%@t.test')`,
+  )).rows[0].n as number;
+  check(
+    "digest scan pages past the 1000-row cap: every one of 1100 matching users is enqueued",
+    scaleDigests === N,
+    `seeded ${N} users at digest_hour_local=${denverHour} (America/Denver) → digests enqueued=${scaleDigests}`,
+  );
+
   await pg.end();
   console.log("\nWP-12 notifications gate against " + BASE + "\n");
   for (const r of results) { console.log(`  [${r.pass ? "PASS" : "FAIL"}] ${r.name}`); console.log(`         ${r.detail}`); }

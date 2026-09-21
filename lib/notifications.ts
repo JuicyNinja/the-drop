@@ -29,6 +29,37 @@ import { getPushSender, type WebPushSubscription } from "@/lib/push";
 const WINDOW_CLOSING_LEAD_MS = 2 * 60 * 60 * 1000; // 2h default (PRD §9.2)
 const NEARLY_GONE_PCT = 0.15; // ~85% claimed
 
+// PostgREST caps an unbounded select at 1000 rows. Every notification scan that
+// grows with the user base (the digest's full-users pass, the drop-live radius
+// scan, a big drop's holders, a large org's followers) MUST page past that cap,
+// or recipients beyond row 1000 are silently dropped. `PAGE` is that cap; the two
+// helpers below are the only sanctioned way to read such a set.
+const PAGE = 1000;
+
+/** Read every row of a select that can exceed PostgREST's 1000-row cap, paging on
+ *  `.range()` until a short page. `page` must apply the same filters each call. */
+async function fetchAllRows<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) throw new Error(`paginated select failed: ${error.message}`);
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
+/** Chunk a large id list into ≤PAGE batches, so both the request URL and each
+ *  batch's result stay under the cap. */
+function chunk<T>(items: T[], size = PAGE): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 type Channel = "sms" | "push" | "email" | "in_app";
 
 interface Prefs { push: boolean; email: boolean; sms: boolean; digest_hour: number }
@@ -37,15 +68,21 @@ const DEFAULT_PREFS: Prefs = { push: true, email: true, sms: true, digest_hour: 
 async function prefsFor(userIds: string[]): Promise<Map<string, Prefs>> {
   const out = new Map<string, Prefs>();
   if (userIds.length === 0) return out;
-  const { data } = await getServiceClient()
-    .from("notification_prefs")
-    .select("user_id, push_enabled, email_enabled, sms_enabled, digest_hour_local")
-    .in("user_id", userIds);
-  for (const r of data ?? []) {
-    out.set(r.user_id as string, {
-      push: r.push_enabled as boolean, email: r.email_enabled as boolean,
-      sms: r.sms_enabled as boolean, digest_hour: r.digest_hour_local as number,
-    });
+  const svc = getServiceClient();
+  // Chunk the id list: an `.in(...)` over >1000 ids would cap its result at 1000,
+  // leaving the overflow users on DEFAULT_PREFS (and possibly notified against a
+  // disabled channel). One batch per ≤1000 ids returns ≤1000 rows, never capped.
+  for (const ids of chunk(userIds)) {
+    const { data } = await svc
+      .from("notification_prefs")
+      .select("user_id, push_enabled, email_enabled, sms_enabled, digest_hour_local")
+      .in("user_id", ids);
+    for (const r of data ?? []) {
+      out.set(r.user_id as string, {
+        push: r.push_enabled as boolean, email: r.email_enabled as boolean,
+        sms: r.sms_enabled as boolean, digest_hour: r.digest_hour_local as number,
+      });
+    }
   }
   return out;
 }
@@ -91,9 +128,13 @@ export async function enqueueDropLive(dropId: string): Promise<{ enqueued: numbe
   const title = drop.title as string;
   const payload = { drop_id: dropId, title, event: "drop_live" };
 
-  const { data: follows } = await svc.from("follows").select("user_id, tier").eq("org_id", orgId);
-  const fanatics = (follows ?? []).filter((f) => f.tier === "fanatic").map((f) => f.user_id as string);
-  const followers = (follows ?? []).filter((f) => f.tier === "follower").map((f) => f.user_id as string);
+  // A popular org's followers or a broad tag's audience can both exceed 1000, so
+  // page every fan-out scan — a truncated audience silently drops recipients.
+  const follows = await fetchAllRows<{ user_id: string; tier: string }>(
+    (from, to) => svc.from("follows").select("user_id, tier").eq("org_id", orgId).range(from, to),
+  );
+  const fanatics = follows.filter((f) => f.tier === "fanatic").map((f) => f.user_id);
+  const followers = follows.filter((f) => f.tier === "follower").map((f) => f.user_id);
   const following = new Set([...fanatics, ...followers]);
 
   // Category matches: users whose selected tags intersect the org's tags.
@@ -101,8 +142,10 @@ export async function enqueueDropLive(dropId: string): Promise<{ enqueued: numbe
   const tagIds = (orgTags ?? []).map((t) => t.tag_id as string);
   const categoryUsers = new Set<string>();
   if (tagIds.length > 0) {
-    const { data: ut } = await svc.from("user_tags").select("user_id").in("tag_id", tagIds);
-    for (const r of ut ?? []) categoryUsers.add(r.user_id as string);
+    const ut = await fetchAllRows<{ user_id: string }>(
+      (from, to) => svc.from("user_tags").select("user_id").in("tag_id", tagIds).range(from, to),
+    );
+    for (const r of ut) categoryUsers.add(r.user_id);
   }
   // Radius matches: users whose active address is within its radius of the drop
   // location. (v1 computes in JS over active addresses; a spatial query is the
@@ -111,6 +154,12 @@ export async function enqueueDropLive(dropId: string): Promise<{ enqueued: numbe
     const { data: loc } = await svc.from("locations").select("lat, lng").eq("id", drop.location_id as string).maybeSingle();
     if (loc && loc.lat !== null && loc.lng !== null) {
       const here = { lat: Number(loc.lat), lng: Number(loc.lng) };
+      // NOTE: this global address scan is deliberately NOT paged here. Its embed
+      // (`users!inner`) is pre-existingly ambiguous ("more than one relationship
+      // … for 'addresses' and 'users'"), so it returns null today and radius
+      // discovery is already inert — paging a query that always errors would only
+      // surface the error and break the whole fan-out. Kept error-tolerant exactly
+      // as before; fixing the embed (and then paging it) is a separate change.
       const { data: addrs } = await svc.from("addresses").select("user_id, lat, lng, radius_miles, users!inner(active_address_id, id)");
       for (const a of addrs ?? []) {
         const u = a.users as unknown as { active_address_id: string | null; id: string };
@@ -159,8 +208,12 @@ export async function enqueueWindowClosing(now: Date = new Date()): Promise<{ en
   const rows: Row[] = [];
   for (const d of drops ?? []) {
     const dropId = d.id as string;
-    const { data: holders } = await svc.from("catches").select("user_id").eq("drop_id", dropId).eq("status", "held");
-    const uids = (holders ?? []).map((h) => h.user_id as string);
+    // A high-quantity drop can hold >1000 catches; page so no holder misses the
+    // closing push.
+    const holders = await fetchAllRows<{ user_id: string }>(
+      (from, to) => svc.from("catches").select("user_id").eq("drop_id", dropId).eq("status", "held").range(from, to),
+    );
+    const uids = holders.map((h) => h.user_id);
     const prefs = await prefsFor(uids);
     const payload = { drop_id: dropId, title: d.title as string, redeem_until: d.redeem_until, event: "window_closing" };
     for (const uid of uids) if (allowed("push", prefFor(prefs, uid))) rows.push({ user_id: uid, kind: "window_closing", channel: "push", payload, ref: dropId });
@@ -176,20 +229,26 @@ export async function enqueueWindowClosing(now: Date = new Date()): Promise<{ en
 export async function enqueueNearlyGone(now: Date = new Date()): Promise<{ enqueued: number }> {
   void now;
   const svc = getServiceClient();
-  const { data: drops } = await svc
-    .from("drops")
-    .select("id, org_id, title, drop_pressure!inner(pct_remaining)")
-    .eq("status", "live");
+  const drops = await fetchAllRows<{ id: string; org_id: string; title: string; drop_pressure: unknown }>(
+    (from, to) => svc.from("drops").select("id, org_id, title, drop_pressure!inner(pct_remaining)").eq("status", "live").range(from, to),
+  );
   const rows: Row[] = [];
-  for (const d of drops ?? []) {
+  for (const d of drops) {
     const pct = (d.drop_pressure as unknown as { pct_remaining: number } | null)?.pct_remaining;
     if (pct === undefined || pct === null || Number(pct) > NEARLY_GONE_PCT) continue;
-    const dropId = d.id as string;
-    const { data: follows } = await svc.from("follows").select("user_id").eq("org_id", d.org_id as string);
-    const audience = (follows ?? []).map((f) => f.user_id as string);
+    const dropId = d.id;
+    const follows = await fetchAllRows<{ user_id: string }>(
+      (from, to) => svc.from("follows").select("user_id").eq("org_id", d.org_id).range(from, to),
+    );
+    const audience = follows.map((f) => f.user_id);
     if (audience.length === 0) continue;
-    const { data: caughtRows } = await svc.from("catches").select("original_user_id").eq("drop_id", dropId).in("original_user_id", audience);
-    const caught = new Set((caughtRows ?? []).map((c) => c.original_user_id as string));
+    // Look up prior catches in ≤1000-id batches: a >1000 `.in(...)` would cap its
+    // result and under-detect catchers, over-notifying them.
+    const caught = new Set<string>();
+    for (const ids of chunk(audience)) {
+      const { data: caughtRows } = await svc.from("catches").select("original_user_id").eq("drop_id", dropId).in("original_user_id", ids);
+      for (const c of caughtRows ?? []) caught.add(c.original_user_id as string);
+    }
     const uncaught = audience.filter((u) => !caught.has(u));
     const prefs = await prefsFor(uncaught);
     const payload = { drop_id: dropId, title: d.title as string, event: "nearly_gone" };
@@ -225,13 +284,19 @@ export async function enqueueDigests(now: Date = new Date()): Promise<{ enqueued
   const svc = getServiceClient();
   const { resolveTimezone, DEFAULT_TIMEZONE } = await import("@/lib/cities");
 
-  const { data: prefRows } = await svc.from("notification_prefs").select("user_id, digest_hour_local, email_enabled");
+  // Both scans are over the whole user base and MUST page the 1000-row cap — the
+  // digest silently skipping everyone past row 1000 is exactly the bug this fixes.
+  const prefRows = await fetchAllRows<{ user_id: string; digest_hour_local: number; email_enabled: boolean }>(
+    (from, to) => svc.from("notification_prefs").select("user_id, digest_hour_local, email_enabled").range(from, to),
+  );
   const prefByUser = new Map<string, { hour: number; email: boolean }>();
-  for (const r of prefRows ?? []) prefByUser.set(r.user_id as string, { hour: r.digest_hour_local as number, email: r.email_enabled as boolean });
+  for (const r of prefRows) prefByUser.set(r.user_id, { hour: r.digest_hour_local, email: r.email_enabled });
 
-  const { data: allUsers } = await svc.from("users").select("id, timezone, active_address_id").is("deleted_at", null);
+  const allUsers = await fetchAllRows<{ id: string; timezone: string | null; active_address_id: string | null }>(
+    (from, to) => svc.from("users").select("id, timezone, active_address_id").is("deleted_at", null).range(from, to),
+  );
   const rows: Row[] = [];
-  for (const u of allUsers ?? []) {
+  for (const u of allUsers) {
     const uid = u.id as string;
     const p = prefByUser.get(uid);
     if (p && !p.email) continue; // digest is email; respect the pref
