@@ -4,7 +4,7 @@
     "label": "Food & Drink",
     "level": "group",
     "ground_token": "g-orange",
-    "ground_hex": "#F25C05",
+    "ground_hex": "#FF6600",
     "file": "food-and-drink.webp",
     "prompt": "Wide 16:9 tile. A dense flat-lay of items representing Food & Drink on a flat solid orange background — a deep, saturated, full-strength orange, the true rich shade, never pale, washed out, or greyed: a cheeseburger, street tacos, a slice of pizza, chicken wings, a sushi roll, a bowl of ramen, a sub sandwich, a green salad. Items arranged in a loose grid filling the entire frame edge to edge, evenly spaced, slightly overlapping, ground visible between them. Shot straight down from directly above. Bright even studio light, soft contact shadows only, no dramatic or raking light, no deep shadow. Ground is edge to edge with no texture, no gradient, no vignette. The lower third of the frame is calm and uncluttered. No text, no logos, no faces, no hands. No props, no clutter. Clean, flat, graphic, modern, punchy, cheerful. The background is a single flat uniform color with absolutely no gradient, no shading, no texture, no wall, no surface detail — a solid color fill from edge to edge."
   },
@@ -31,7 +31,7 @@
     "label": "Grocery & Specialty Food",
     "level": "group",
     "ground_token": "g-orange",
-    "ground_hex": "#F25C05",
+    "ground_hex": "#FF6600",
     "file": "grocery-and-specialty-food.webp",
     "prompt": "Wide 16:9 tile. A dense flat-lay of items representing Grocery & Specialty Food on a flat solid orange background — a deep, saturated, full-strength orange, the true rich shade, never pale, washed out, or greyed: a wedge of aged cheese, a jar of honey, a bundle of carrots with greens, a bottle of hot sauce, a cut of steak on butcher paper, a loaf of bread, a jar of preserves, fresh eggs in a carton. Items arranged in a loose grid filling the entire frame edge to edge, evenly spaced, slightly overlapping, ground visible between them. Shot straight down from directly above. Bright even studio light, soft contact shadows only, no dramatic or raking light, no deep shadow. Ground is edge to edge with no texture, no gradient, no vignette. The lower third of the frame is calm and uncluttered. No text, no logos, no faces, no hands. No props, no clutter. Clean, flat, graphic, modern, punchy, cheerful. The background is a single flat uniform color with absolutely no gradient, no shading, no texture, no wall, no surface detail — a solid color fill from edge to edge."
   },

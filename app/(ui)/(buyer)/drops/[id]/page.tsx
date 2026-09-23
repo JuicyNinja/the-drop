@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, getSession } from "@/app/(ui)/_lib/api";
-import { Pips } from "@/components/Pips";
+import { Pips } from "@/components/drops/Pips";
 import { LogoBubble } from "@/components/LogoBubble";
-import { SplitFlap } from "@/components/SplitFlap";
-import { GoneStamp } from "@/components/GoneStamp";
+import { SplitFlap } from "@/components/drops/SplitFlap";
+import { GoneStamp } from "@/components/drops/GoneStamp";
 import { FollowButton } from "@/app/(ui)/(buyer)/_lib/FollowButton";
 
 interface PublicDrop {

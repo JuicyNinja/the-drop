@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
-import { Pips } from "@/components/Pips";
+import { Pips } from "@/components/drops/Pips";
 import { LogoBubble } from "@/components/LogoBubble";
 
 interface ProfileCard {

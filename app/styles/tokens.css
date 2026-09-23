@@ -1,60 +1,92 @@
 /*
- * THE DROP — design tokens (DESIGN-SYSTEM §14). Imported once at the root.
- * No component may hardcode a hex value; every color, size, radius, shadow, and
- * breakpoint lives here. The board is the object, the page is the hall.
+ * THE DROP — design tokens, ported to the Claude Design system
+ * (design-system/design.md, "the-drop-2026-09-23"): Drop Orange #FF6600 +
+ * Drop Blue #005599, Inter / Newsreader / JetBrains Mono, soft neutral
+ * elevation, light-first. Fonts load via next/font in app/layout.tsx and land
+ * on the --font-inter / --font-newsreader / --font-jetbrains vars below.
+ *
+ * PORT: the Claude palette is the source of truth; the app's existing component
+ * tokens (--hall, --board, --signal, …) are re-pointed to it as aliases. The
+ * DropCard's surface (--board) maps to the new INK tone — ink is a legitimate
+ * card front in this system.
+ *
+ * The category grounds (--g-*) are not part of the Claude palette (no
+ * category-ground set) and are preserved, like the discrete scarcity pips
+ * (§15.3). The one exception: --g-orange is unified to the primary #FF6600 (its
+ * two group tiles were regenerated), so there is one orange, not two a hair
+ * apart.
  */
 
-/* --- Fonts: three faces, self-hosted WOFF2, latin subset, swap (§2). --------- */
-@font-face {
-  font-family: "Bricolage Grotesque";
-  src: url("/fonts/BricolageGrotesque.woff2") format("woff2");
-  font-weight: 200 800;
-  font-stretch: 75% 100%;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Satoshi";
-  src: url("/fonts/Satoshi-Variable.woff2") format("woff2");
-  font-weight: 300 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Departure Mono";
-  src: url("/fonts/DepartureMono-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
-  /* 1.1 Core palette — six values */
-  --hall: #fafaf8;
-  --board: #23242a;
-  --ink: #16171b;
-  --signal: #f25c05;
-  --flap: #f5b428;
-  --oxide: #c0271a;
+  /* ===================== CLAUDE PALETTE (source of truth) ============= */
+  --primary: #ff6600;
+  --primary-hover: #e55a00;
+  --primary-press: #bf4b00;
+  --primary-soft: #fff3eb;
+  --secondary: #005599;
+  --secondary-hover: #004a85;
+  --secondary-press: #003d6e;
+  --secondary-soft: #ebf3fa;
+  --accent: #ff6600;
 
-  /* 1.2 Supporting neutrals */
-  --hall-sunk: #f2f1ed;
-  --board-lift: #2e3037;
-  --board-deep: #191a1f;
-  --grey: #6e7078;
-  --grey-mute: #9b9da4;
-  --hairline: #e3e1dc;
-  --on-board: #f0eee8;
+  --c-ink: #121212;
+  --background: #fdfdfd;
+  --background-subtle: #f6f7f9;
+  --surface: #ffffff;
+  --surface-muted: #e5e7eb;
+  --surface-inverse: #121212;
 
-  /* 1.4 State colors */
-  --state-live: var(--signal);
-  --state-ending: var(--flap);
-  --state-gone: var(--oxide);
-  --state-unverified: var(--grey);
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --text-disabled: #9ca3af;
+  --text-on-color: #ffffff;
 
-  /* pressed edge for the Catch key (§8) */
-  --signal-edge: #c94a04;
+  --c-border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --c-focus: #2979bd;
+  --success: #14a44d;  --success-soft: #e8f7ee;
+  --warning: #ffc21a;  --warning-soft: #fff8e1;
+  --danger:  #e5243b;  --danger-soft:  #fdecee;
 
-  /* 15.3 Category tile grounds — 9 grounds, owned by the group (never per-leaf).
-     These back the CSS category label; the tile photo carries the same color. */
-  --g-orange: #f25c05;
+  /* neutral ramp */
+  --n-0: #fdfdfd; --n-50: #f6f7f9; --n-100: #f0f1f4; --n-200: #e5e7eb; --n-300: #d1d5db;
+  --n-400: #9ca3af; --n-500: #6b7280; --n-600: #4b5563; --n-700: #374151; --n-800: #1f2937; --n-900: #111827;
+  /* orange + blue ramps (for the component phase) */
+  --o-50:#fff3eb; --o-100:#ffe2cc; --o-200:#ffc499; --o-300:#ffa366; --o-400:#ff8533;
+  --o-500:#ff6600; --o-600:#e55a00; --o-700:#bf4b00; --o-800:#8f3800; --o-900:#5c2400;
+  --b-50:#ebf3fa; --b-100:#cce0f2; --b-200:#99c2e5; --b-300:#5c9ed4; --b-400:#2979bd;
+  --b-500:#005599; --b-600:#004a85; --b-700:#003d6e; --b-800:#002d52; --b-900:#001c33;
+
+  /* ===================== LEGACY ALIASES (re-pointed) ================== */
+  /* The components reference these names; they now resolve to the Claude palette
+     so the existing board restyles ahead of the component swap. */
+  --hall: var(--background);
+  --hall-sunk: var(--background-subtle);
+  --board: var(--c-ink);          /* dark DropCard front tone (ink) */
+  --board-lift: #1f2937;          /* elevated dark surface / hover */
+  --board-deep: #0b0c0f;          /* pip track + deep accents */
+  --ink: var(--c-ink);
+  --on-board: var(--text-on-color);
+  --signal: var(--primary);
+  --signal-edge: var(--primary-press);
+  --flap: var(--warning);
+  --oxide: var(--danger);
+  --grey: var(--text-secondary);
+  --grey-mute: var(--text-disabled);
+  --hairline: var(--c-border);
+
+  --state-live: var(--primary);
+  --state-ending: var(--warning);
+  --state-gone: var(--danger);
+  --state-unverified: var(--text-tertiary);
+
+  /* ===================== CATEGORY GROUNDS (§15.3) ==================== */
+  /* Not covered by the Claude palette; preserved, like the discrete pips. Eight
+     are unchanged; --g-orange is unified to the primary #FF6600 (food-and-drink
+     + grocery-and-specialty-food tiles regenerated). The chip label strips carry
+     the exact token; the tile photo ground may drift (§15.2.1). */
+  --g-orange: #ff6600;
   --g-amber:  #f5b428;
   --g-oxide:  #c0271a;
   --g-steel:  #2e5a78;
@@ -64,49 +96,49 @@
   --g-mint:   #58b89c;
   --g-bone:   #ede6d8;
 
-  /* 2.2 Type scale — base 16, ratio 1.25 with a display jump */
-  --t-xs: 0.75rem;
-  --t-sm: 0.875rem;
-  --t-base: 1rem;
-  --t-md: 1.125rem;
-  --t-lg: 1.5rem;
-  --t-xl: 2rem;
-  --t-2xl: 3rem;
-  --t-3xl: 4.5rem;
+  /* ===================== TYPE ========================================= */
+  --font-display: var(--font-inter), system-ui, sans-serif;
+  --font-ui:      var(--font-inter), system-ui, sans-serif;
+  --font-body:    var(--font-newsreader), Georgia, serif;
+  --font-data:    var(--font-jetbrains), ui-monospace, monospace;
 
-  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
-  --font-ui: "Satoshi", system-ui, sans-serif;
-  --font-data: "Departure Mono", ui-monospace, monospace;
+  /* size steps map to the design's display→label ladder (72/48/32/24/18/16/14/12) */
+  --t-xs: 0.75rem;  --t-sm: 0.875rem; --t-base: 1rem;  --t-md: 1.125rem;
+  --t-lg: 1.5rem;   --t-xl: 2rem;     --t-2xl: 3rem;    --t-3xl: 4.5rem;
 
-  /* 3 Space */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 48px;
-  --s-8: 64px;
-  --s-9: 96px;
+  /* ===================== SPACE ======================================= */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px;
+  --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+  --gap: 16px; --card-padding: 24px; --screen-gutter: 16px; --section-padding: 80px; --content-max: 1200px;
+  --control-sm: 32px; --control-md: 44px; --control-lg: 56px;
 
-  /* 3 Radius */
-  --r-tile: 10px;
-  --r-field: 8px;
-  --r-pill: 999px;
-  --r-btn: 8px;
+  /* ===================== RADIUS ====================================== */
+  --r-xs: 4px; --r-field: 8px; --r-btn: 8px; --r-md: 12px;
+  --r-tile: 16px; --r-sheet: 24px; --r-pill: 9999px;
 
-  /* 3 Shadow — mechanical, not soft */
-  --sh-logo: -2px -2px 0 rgba(0, 0, 0, 0.18);
-  --sh-tile: 0 2px 0 var(--board-deep), 0 8px 16px -6px rgba(22, 23, 27, 0.28);
-  --sh-lift: 0 4px 0 var(--board-deep), 0 16px 32px -8px rgba(22, 23, 27, 0.34);
-  --sh-gone: 0 1px 0 rgba(0, 0, 0, 0.1);
+  /* ===================== ELEVATION (soft, neutral) =================== */
+  --sh-xs: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --sh-sm: 0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04);
+  --sh-md: 0 6px 16px -4px rgba(17, 24, 39, 0.12), 0 2px 4px rgba(17, 24, 39, 0.05);
+  --sh-lg: 0 18px 40px -12px rgba(17, 24, 39, 0.22), 0 4px 8px rgba(17, 24, 39, 0.06);
+  --sh-hot: 0 10px 24px -8px rgba(255, 102, 0, 0.55);
+  --sh-brand: 0 10px 24px -8px rgba(0, 85, 153, 0.5);
+  --sh-sticker: 0 0 0 3px #ffffff, 0 0 0 6px #ff6600;
+  /* legacy shadow names → soft elevation (the old hard-edge board shadow is gone) */
+  --sh-logo: var(--sh-sm);
+  --sh-tile: var(--sh-md);
+  --sh-lift: var(--sh-lg);
+  --sh-gone: var(--sh-xs);
 
-  /* 10 Breakpoints (for reference; used in media queries) */
-  --bp-sm: 480px;
-  --bp-md: 768px;
-  --bp-lg: 1024px;
-  --bp-xl: 1440px;
+  /* ===================== MOTION ====================================== */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 360ms; --dur-flip: 560ms;
 
-  /* focus ring (§12) */
-  --focus-ring: 0 0 0 3px rgba(242, 92, 5, 0.4);
+  /* ===================== GLASS / FOCUS / BREAKPOINTS ================= */
+  --glass-bg: rgba(253, 253, 253, 0.78);
+  --glass-blur: 16px;
+  --focus-ring: 0 0 0 3px rgba(41, 121, 189, 0.35);
+  --bp-sm: 480px; --bp-md: 768px; --bp-lg: 1024px; --bp-xl: 1440px;
 }

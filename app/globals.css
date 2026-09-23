@@ -3,8 +3,9 @@
 @import "./styles/operator.css";
 
 /*
- * Base. The page is the hall: near-white, barely warm. Body is Satoshi.
- * The one loud thing is the flip; everything here stays quiet.
+ * Base — Claude Design system (design-system/design.md). Light-first, Inter for
+ * display + UI, Newsreader for body, JetBrains Mono for numbers/labels. One
+ * orange primary per view; color arrives in bold blocks, not tints everywhere.
  */
 
 *,
@@ -27,25 +28,25 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* 2.3 Type treatments */
+/* 2.3 Type treatments — Inter 900 display, tight negative tracking. */
 .display {
   font-family: var(--font-display);
-  font-variation-settings: "wght" 600, "wdth" 100, "opsz" 40;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
 }
 .coupon {
   font-family: var(--font-display);
-  font-variation-settings: "wght" 800, "wdth" 85;
+  font-weight: 900;
   font-size: var(--t-2xl);
   line-height: 0.95;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   color: var(--ink);
 }
 .data {
   font-family: var(--font-data);
-  font-weight: 400;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -53,9 +54,9 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  font-variation-settings: "wght" 600, "wdth" 100, "opsz" 40;
+  font-weight: 800;
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   margin: 0;
 }
 
@@ -69,76 +70,87 @@ video {
   display: block;
 }
 
-/* 7.1 Fields */
+/* 7.1 Fields — white field, 1px border, blue focus ring; mono uppercase label. */
 input,
 textarea,
 select {
-  background: var(--hall-sunk);
-  border: 1px solid var(--hairline);
+  background: var(--surface);
+  border: 1px solid var(--c-border);
   border-radius: var(--r-field);
-  padding: 14px 16px;
+  padding: 12px;
   font: 400 var(--t-base) var(--font-ui);
-  min-height: 48px;
-  color: var(--ink);
+  min-height: var(--control-md);
+  color: var(--text-primary);
   width: 100%;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
+input::placeholder,
+textarea::placeholder { color: var(--text-tertiary); }
 input:focus,
 textarea:focus,
 select:focus {
-  background: #fff;
-  border-color: var(--signal);
-  box-shadow: 0 0 0 3px rgba(242, 92, 5, 0.14);
+  border-color: var(--c-focus);
+  box-shadow: var(--focus-ring);
   outline: none;
 }
 label {
   display: block;
-  font-size: var(--t-sm);
-  color: var(--grey);
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
   margin-bottom: var(--s-2);
 }
 
-/* 8 Buttons — say exactly what happens; never an arrow glyph. */
+/* 8 Buttons — Claude Button: 44 tall, radius 8, Inter 700 15px, sentence case;
+   hover lifts −2px and darkens one step (primary gains the hot glow); press .96. */
 button {
   font-family: var(--font-ui);
   cursor: pointer;
 }
-.btn-catch {
-  background: var(--signal);
-  color: #fff;
-  font: 600 var(--t-md) var(--font-ui);
-  padding: 16px 32px;
-  border: none;
-  border-radius: var(--r-btn);
-  min-height: 52px;
-  box-shadow: 0 2px 0 var(--signal-edge);
-}
-.btn-catch:active {
-  transform: translateY(2px);
-  box-shadow: none;
-}
-.btn-catch:disabled {
-  background: var(--grey-mute);
-  box-shadow: 0 2px 0 var(--grey);
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--ink);
-  border-radius: var(--r-btn);
-  min-height: 52px;
-  padding: 16px 32px;
-  font: 600 var(--t-base) var(--font-ui);
-}
+.btn-catch,
+.btn-secondary,
 .btn-board {
-  background: var(--board-lift);
-  color: var(--on-board);
-  border: none;
+  min-height: var(--control-md);
+  padding: 0 18px;
   border-radius: var(--r-btn);
-  min-height: 52px;
-  padding: 16px 32px;
-  font: 600 var(--t-base) var(--font-ui);
+  font: 700 15px/1.2 var(--font-ui);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  transition: transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
+/* primary */
+.btn-catch {
+  background: var(--primary);
+  color: var(--text-on-color);
+  border: none;
+}
+.btn-catch:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: var(--sh-hot); }
+.btn-catch:active:not(:disabled) { transform: scale(0.96); box-shadow: none; }
+.btn-catch:disabled { background: var(--surface-muted); color: var(--text-disabled); cursor: not-allowed; }
+/* outline / secondary */
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+}
+.btn-secondary:hover:not(:disabled) { background: var(--background-subtle); transform: translateY(-2px); box-shadow: var(--sh-sm); }
+.btn-secondary:active:not(:disabled) { transform: scale(0.96); box-shadow: none; }
+.btn-secondary:disabled { color: var(--text-disabled); cursor: not-allowed; }
+/* ink (over color / board) */
+.btn-board {
+  background: var(--c-ink);
+  color: var(--text-on-color);
+  border: none;
+}
+.btn-board:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--sh-md); }
+.btn-board:active:not(:disabled) { transform: scale(0.96); box-shadow: none; }
 
 /* 12 Accessibility — visible focus ring on every interactive element. */
 a:focus-visible,

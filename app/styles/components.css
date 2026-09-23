@@ -51,23 +51,26 @@
   align-items: center;
   flex-wrap: wrap;
 }
+/* Scarcity stays DISCRETE units (never a continuous bar) — twelve remaining is
+   twelve things. Takes the ScarcityBar pill treatment: rounded units, orange
+   fill, red at critical (≤15%, via .pip-low). */
 .pip {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--hairline);
+  width: 11px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-muted);
   overflow: hidden;
   display: inline-block;
 }
-.pip-onboard { background: var(--board-deep); }
+.pip-onboard { background: rgba(255, 255, 255, 0.24); }
 .pip-fill {
   display: block;
   height: 100%;
-  background: var(--signal);
+  background: var(--primary);
   /* a pip going out is a mechanical hard step, never a fade */
   transition: width 120ms steps(1, end);
 }
-.pip-low .pip-fill { background: var(--flap); }
+.pip-low .pip-fill { background: var(--danger); }
 
 /* ============================ LOGO BUBBLE (§4.2) ======================= */
 /* The merchant mark sits beside the name (front: 40px; flip side: 56px), not in
@@ -89,7 +92,7 @@
 }
 .logo-bubble-lg { width: 56px; height: 56px; font-size: var(--t-md); }
 .logo-bubble-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.logo-mono { font-variation-settings: "wght" 600; letter-spacing: 0.02em; }
+.logo-mono { font-weight: 600; letter-spacing: 0.02em; }
 /* Monogram ground colors — mirror the §15.3 group grounds; two-class specificity
    overrides the .logo-bubble default fill (matches the coupon-on-* pattern). */
 .logo-bubble.lg-orange { background: var(--g-orange); color: #fff; }
@@ -172,14 +175,44 @@
 }
 .card-wrap:hover .card-face { box-shadow: var(--sh-lift); }
 
+/* Status chip → Claude Badge: a mono uppercase sticker pill with a status dot.
+   The split-flap still flips on arrival/Gone (§4.9) — but within the pill the
+   flaps read as flat mono text, not dark blocks, so the badge stays legible. */
 .chip {
   position: absolute;
   top: var(--s-4);
   right: var(--s-4);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 4px 9px 4px 7px;
+  background: var(--surface);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-sm);
   font-size: var(--t-xs);
 }
-.chip-flap { font-size: var(--t-xs); }
-.chip-gone .sf-tile { background: var(--oxide); }
+/* live status dot — pulses while the drop is live, steady red when Gone */
+.chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  flex: none;
+  animation: chip-pulse 1.8s var(--ease-in-out) infinite;
+}
+.chip-gone::before { background: var(--danger); animation: none; }
+@keyframes chip-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.65); }
+}
+@media (prefers-reduced-motion: reduce) { .chip::before { animation: none; } }
+.chip-flap { font-size: var(--t-xs); letter-spacing: 0.06em; }
+/* flatten the flap inside the pill: mono ink text, no dark tile, no split line */
+.chip .sf-tile { background: transparent; color: var(--ink); min-width: 0.58em; padding: 0; border-radius: 0; }
+.chip .sf-tile::after { display: none; }
+.chip-gone .sf-tile { color: var(--danger); }
 
 /* The drop tile fills the card; coupon print overlays the clean negative space. */
 .card-tile {
@@ -305,19 +338,31 @@
 }
 .card-back-merchant {
   font-family: var(--font-display);
-  font-variation-settings: "wght" 600;
+  font-weight: 700;
   font-size: var(--t-md);
   color: var(--ink);
 }
 .card-back-title {
   font-family: var(--font-display);
-  font-variation-settings: "wght" 600;
+  font-weight: 800;
   font-size: var(--t-lg);
+  letter-spacing: -0.02em;
   margin: var(--s-4) 0 0;
 }
 .card-back-list { margin: 0; display: flex; flex-direction: column; gap: var(--s-4); }
 .card-back-list div { display: flex; flex-direction: column; gap: 2px; }
-.card-back-list dt { font-size: var(--t-xs); color: var(--grey); }
+/* label: mono uppercase micro-label (Claude form label) */
+.card-back-list dt {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+/* value: structured data (count, window) — Inter/mono, not serif. The Remaining
+   value carries .data (mono); the window value stays Inter. Serif is reserved
+   for prose, and the card back currently shows none. */
 .card-back-list dd { margin: 0; font-size: var(--t-base); color: var(--ink); }
 
 /* ============================ BOARD (§10) ============================== */
@@ -340,17 +385,27 @@
   color: var(--grey);
   margin: var(--s-7) 0 var(--s-4);
 }
+/* Web UI kit: auto-fill grid on 260px minimum tracks (single column on phones). */
 .board-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--s-5);
 }
 @media (min-width: 768px) {
-  .board-grid { grid-template-columns: repeat(2, 1fr); }
+  .board-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 }
-@media (min-width: 1024px) {
-  .board-grid { grid-template-columns: repeat(3, 1fr); }
+/* Entrance: cards rise 8px + fade, 40ms stagger (§ Motion drop-in). Disabled
+   under prefers-reduced-motion by the global rule in globals.css. */
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
+.board-grid > * { animation: drop-in var(--dur-slow) var(--ease-out) both; }
+.board-grid > *:nth-child(2) { animation-delay: 40ms; }
+.board-grid > *:nth-child(3) { animation-delay: 80ms; }
+.board-grid > *:nth-child(4) { animation-delay: 120ms; }
+.board-grid > *:nth-child(5) { animation-delay: 160ms; }
+.board-grid > *:nth-child(n+6) { animation-delay: 200ms; }
 .board-empty {
   color: var(--grey);
   font-size: var(--t-base);
@@ -358,11 +413,14 @@
 }
 
 /* ============================ NAV TABS ================================= */
+/* Floating chrome → glass (§ Elevation: 78% white + 16px blur on nav only). */
 .nav {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--hall);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-bottom: 1px solid var(--hairline);
 }
 .nav-inner {
@@ -374,11 +432,24 @@
   padding: var(--s-3) var(--s-4);
 }
 .nav-brand {
-  font-family: var(--font-display);
-  font-variation-settings: "wght" 700, "wdth" 90;
-  font-size: var(--t-lg);
-  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
+/* Brand mark — the script wordmark carries the identity; the accessible name
+   ("The Drop") stays on the link/alt so the lexicon holds. */
+.nav-brand-logo {
+  height: 30px;
+  width: auto;
+  display: block;
+}
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  margin: 0 auto 0 var(--s-6); /* brand left · tabs · market pushed right */
+}
+.active-address-link { margin-left: var(--s-4); }
 .nav-link {
   font-size: var(--t-base);
   color: var(--grey);
@@ -387,6 +458,42 @@
 .nav-link[data-active="true"] {
   color: var(--ink);
   box-shadow: inset 0 -2px 0 var(--signal);
+}
+/* Bottom tab bar exists only at mobile width. */
+.nav-bottom { display: none; }
+
+@media (max-width: 767px) {
+  /* top bar carries only brand + active market; tabs drop to the bottom bar */
+  .nav-tabs { display: none; }
+  .nav-brand-logo { height: 24px; }
+  .nav-inner { gap: var(--s-3); justify-content: space-between; }
+  .active-address-link { margin-left: 0; }
+  .nav-bottom {
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-top: 1px solid var(--hairline);
+    padding: var(--s-2) var(--s-2) calc(var(--s-2) + env(safe-area-inset-bottom, 0px));
+  }
+  .nav-bottom .nav-link {
+    flex: 1;
+    text-align: center;
+    padding: var(--s-2) 0;
+    font-size: var(--t-sm);
+  }
+  /* active in the bottom bar reads as orange, not an underline */
+  .nav-bottom .nav-link[data-active="true"] { color: var(--signal); box-shadow: none; }
+  /* content clears the fixed bottom bar */
+  .board-hall,
+  .page { padding-bottom: calc(var(--s-8) + var(--control-lg)); }
 }
 
 /* ============================ MISC ==================================== */
@@ -426,12 +533,26 @@
   margin-bottom: var(--s-6);
 }
 .detail-offer { margin: var(--s-5) 0 0; }
+/* the container holds prose AND scanned facts, so it carries no face itself */
 .detail-body { }
+/* the drop description is the one piece of prose here → Newsreader (§2.2).
+   Serif carries prose you read, never data you scan — so it lands on the
+   description paragraph alone, not the facts around it. */
+.detail-body .body { font-family: var(--font-body); font-size: var(--t-md); line-height: 1.6; color: var(--text-secondary); }
 .detail-merchant { display: flex; align-items: center; gap: var(--s-3); }
-.detail-merchant-name { font-family: var(--font-display); font-variation-settings: "wght" 600; font-size: var(--t-md); }
+.detail-merchant-name { font-family: var(--font-display); font-weight: 700; font-size: var(--t-md); }
 .detail-facts { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s-5); }
 .detail-facts div { display: flex; flex-direction: column; gap: 2px; }
-.detail-facts dt { font-size: var(--t-xs); color: var(--grey); }
+/* fact labels: mono-uppercase micro-label, matching the card back so the two
+   surfaces agree. Values (address, window, %) stay Inter/mono — scanned data. */
+.detail-facts dt {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
 .detail-facts dd { margin: 0; }
 .position-hint {
   font-size: var(--t-md);
@@ -520,12 +641,18 @@
 .you-tier { font-size: var(--t-2xl); color: var(--signal); margin: 0; }
 .you-usernum { font-size: var(--t-sm); color: var(--grey); }
 .you-badges { flex-wrap: wrap; }
+/* Claude Badge — mono uppercase pill, quiet neutral fill */
 .badge {
-  background: var(--hall-sunk);
-  border: 1px solid var(--hairline);
+  background: var(--background-subtle);
+  border: 1px solid var(--c-border);
   border-radius: var(--r-pill);
   padding: var(--s-1) var(--s-3);
-  font-size: var(--t-sm);
+  font-family: var(--font-data);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 .you-signout { align-self: flex-start; min-height: 44px; padding: var(--s-2) var(--s-5); }
 .past-expired { filter: grayscale(1); }
@@ -714,13 +841,13 @@
 .clout-when { font-size: var(--t-xs); }
 
 /* ===================== WALKTHROUGH (B8) ============================== */
-.wt-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--s-4); background: rgba(20, 16, 12, 0.55); }
+.wt-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--s-4); background: rgba(17, 24, 39, 0.55); }
 .wt-card { width: 100%; max-width: 420px; padding: var(--s-6); background: var(--hall); border: 1px solid var(--hairline); border-radius: var(--r-tile); box-shadow: var(--sh-lift); }
 .wt-dots { display: flex; gap: var(--s-2); }
 .wt-dot { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--hairline); }
 .wt-dot-on { background: var(--signal); }
 .wt-title { font-family: var(--font-display); font-weight: 800; font-size: var(--t-xl); line-height: 1.1; color: var(--ink); }
-.wt-body { font-size: var(--t-base); color: var(--grey); }
+.wt-body { font-family: var(--font-body); font-size: var(--t-md); line-height: 1.6; color: var(--text-secondary); }
 .wt-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); margin-top: var(--s-2); }
 
 /* ===================== CATEGORY CHIPS (§15.2 tile grammar) ============= */

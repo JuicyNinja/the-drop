@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
-import { DropCard, type BoardCard } from "@/components/DropCard";
+import { DropCard, type BoardCard } from "@/components/drops/DropCard";
 import { BoardFilter, type BoardSort, type RedeemFilter } from "@/app/(ui)/(buyer)/_lib/BoardFilter";
 import { CategoryChips } from "@/app/(ui)/(buyer)/_lib/CategoryChips";
 

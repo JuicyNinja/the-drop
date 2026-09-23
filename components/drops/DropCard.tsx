@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Pips } from "./Pips";
-import { LogoBubble } from "./LogoBubble";
+import { LogoBubble } from "../LogoBubble";
 import { GoneStamp } from "./GoneStamp";
 import { SplitFlap } from "./SplitFlap";
 import { FollowButton } from "@/app/(ui)/(buyer)/_lib/FollowButton";

@@ -44,3 +44,6 @@ next-env.d.ts
 # supabase local
 supabase/.temp/
 supabase/.branches/
+
+# session scratch (temporary working files)
+scratchpad/
