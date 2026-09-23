@@ -22,7 +22,7 @@ const route = defineRoute(
     response: {
       data: z.object({
         attributed: z.boolean(),
-        reason: z.enum(["self", "already_verified"]).optional(),
+        reason: z.enum(["self", "already_verified", "unredeemed"]).optional(),
         clout_earned: z.number().optional(),
       }),
     },

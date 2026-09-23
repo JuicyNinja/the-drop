@@ -5509,7 +5509,8 @@
                 "type": "string",
                 "enum": [
                   "self",
-                  "already_verified"
+                  "already_verified",
+                  "unredeemed"
                 ]
               },
               "clout_earned": {

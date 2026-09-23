@@ -218,16 +218,27 @@ async function main(): Promise<void> {
   const afterSelf = await cloutShareCount(A.uid);
   check("requirement 1: the sharer cannot self-attribute (verify by sharer → not attributed, zero clout)", selfVerify.body.data?.attributed === false && selfVerify.body.data?.reason === "self" && afterSelf === 0, `attributed=${selfVerify.body.data?.attributed} reason=${selfVerify.body.data?.reason}; clout=${afterSelf}`);
 
-  // A distinct user's verified return grants exactly one.
+  // POSITIVE: this share carries the sharer's own redemption (created at line ~203
+  // with redemption_id), so a distinct user's verified return grants exactly one.
   const verifyB = await api(`/v1/shares/${token}/verify`, { method: "POST", token: B.token });
   const afterB = await cloutShareCount(A.uid);
-  check("a verified return click by a DIFFERENT user grants the sharer exactly one attributed_share", verifyB.body.data?.attributed === true && verifyB.body.data?.clout_earned > 0 && afterB === 1, `attributed=${verifyB.body.data?.attributed} clout=${verifyB.body.data?.clout_earned}; sharer share-events=${afterB}`);
+  check("a verified return on a share carrying the sharer's OWN redemption grants exactly one attributed_share", verifyB.body.data?.attributed === true && verifyB.body.data?.clout_earned > 0 && afterB === 1, `attributed=${verifyB.body.data?.attributed} clout=${verifyB.body.data?.clout_earned}; sharer share-events=${afterB}`);
 
   // Repeat verifies do not compound.
   const verifyBAgain = await api(`/v1/shares/${token}/verify`, { method: "POST", token: B.token });
   const verifyO2 = await api(`/v1/shares/${token}/verify`, { method: "POST", token: O2.token });
   const afterRepeat = await cloutShareCount(A.uid);
   check("requirement 1: repeat verified clicks do NOT compound (still exactly one attributed_share)", verifyBAgain.body.data?.attributed === false && verifyO2.body.data?.attributed === false && afterRepeat === 1, `repeatB=${verifyBAgain.body.data?.reason} other=${verifyO2.body.data?.reason}; sharer share-events=${afterRepeat}`);
+
+  // NEGATIVE (doctrine: clout is for showing up, not broadcasting). A share of a
+  // drop the sharer never redeemed carries no redemption_id — it still spreads the
+  // drop, but a genuine verified return by a different user earns ZERO clout. The
+  // sharer's attributed_share count must stay at 1 (unchanged from the positive).
+  const shareNoRed = await api("/v1/shares", { method: "POST", token: A.token, body: { drop_id: drop } });
+  const tokenNoRed = shareNoRed.body.data?.token;
+  const verifyNoRed = await api(`/v1/shares/${tokenNoRed}/verify`, { method: "POST", token: B.token });
+  const afterNoRed = await cloutShareCount(A.uid);
+  check("a share with NO sharer-redemption earns ZERO on a verified return (attributed=false, reason 'unredeemed')", shareNoRed.status === 201 && verifyNoRed.body.data?.attributed === false && verifyNoRed.body.data?.reason === "unredeemed" && afterNoRed === 1, `share=${shareNoRed.status}; attributed=${verifyNoRed.body.data?.attributed} reason=${verifyNoRed.body.data?.reason}; sharer share-events=${afterNoRed}`);
 
   // ========================================================================
   // Location → city is mandatory (WP-10 fix): resolved at create, rejected when

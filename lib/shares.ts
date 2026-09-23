@@ -74,20 +74,27 @@ export async function recordClick(token: string): Promise<{ drop_id: string } | 
 
 export interface VerifyResult {
   attributed: boolean;
-  reason?: "self" | "already_verified";
+  reason?: "self" | "already_verified" | "unredeemed";
   clout_earned?: number;
 }
 
 /**
  * A verified return: an authenticated user (`callerId`) came back through the
- * link. Grants the sharer clout once, subject to the two fraud rules.
+ * link. Grants the sharer clout once, subject to the fraud rules.
+ *
+ * Clout is for showing up, not broadcasting: it is granted ONLY when the share
+ * carries the sharer's own completed redemption (`share_links.redemption_id` →
+ * a `redemptions` row owned by the sharer). A share without one still resolves
+ * the return and still spreads the drop — it just earns nothing. This closes
+ * the farm where a link to a drop the sharer never caught pays out on strangers'
+ * clicks (the deal must be complete for clout to count).
  */
 export async function verifyReturn(callerId: string, token: string): Promise<VerifyResult> {
   const svc = getServiceClient();
 
   const { data: share, error } = await svc
     .from("share_links")
-    .select("id, user_id, drop_id, verified_at")
+    .select("id, user_id, drop_id, redemption_id, verified_at")
     .eq("token", token)
     .maybeSingle();
   if (error) throw new Error(`load share failed: ${error.message}`);
@@ -97,6 +104,19 @@ export async function verifyReturn(callerId: string, token: string): Promise<Ver
   if (share.user_id === callerId) return { attributed: false, reason: "self" };
   // Already attributed: repeat returns never compound.
   if (share.verified_at !== null) return { attributed: false, reason: "already_verified" };
+
+  // Clout requires the sharer's own completed redemption of the drop. No redemption
+  // → the share spreads but earns nothing; verified_at is left unclaimed so the
+  // check is not consumed. Re-validate ownership here (not only at create), so the
+  // award point enforces the invariant regardless of how the share was created.
+  if (!share.redemption_id) return { attributed: false, reason: "unredeemed" };
+  const { data: red, error: rErr } = await svc
+    .from("redemptions")
+    .select("user_id")
+    .eq("id", share.redemption_id as string)
+    .maybeSingle();
+  if (rErr) throw new Error(`load share redemption failed: ${rErr.message}`);
+  if (!red || red.user_id !== share.user_id) return { attributed: false, reason: "unredeemed" };
 
   // Claim the single grant with a conditional update, so concurrent verifies
   // resolve to exactly one winner.
