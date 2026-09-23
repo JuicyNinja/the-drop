@@ -101,3 +101,27 @@ export async function consumeDropAllowance(org: OrgLimits, locationId: string): 
   const used = data as number;
   return used < 0 ? { ok: false, drops_used: null, cycle } : { ok: true, drops_used: used, cycle };
 }
+
+/**
+ * Consume N drops atomically for the given location's scope — all or nothing.
+ * Returns ok:false (consuming nothing) when the whole batch would exceed the
+ * cap. Allowance is never restored (invariant #2), so bulk scheduling must gate
+ * on this: the batch either fits entirely or none of it is scheduled.
+ */
+export async function consumeDropAllowanceN(org: OrgLimits, locationId: string, n: number): Promise<ConsumeResult> {
+  const cycle = currentCycle(org.cycle_anchor_at);
+  const scope = scopeLocation(org.drops_pooled_org_level, locationId);
+
+  const { data, error } = await getServiceClient().rpc("app_consume_drop_allowance_n", {
+    p_org: org.id,
+    p_location: scope,
+    p_cycle_start: cycle.start,
+    p_cycle_end: cycle.end,
+    p_limit: org.drops_per_cycle,
+    p_n: n,
+  });
+  if (error) throw new Error(`consume allowance (batch) failed: ${error.message}`);
+
+  const used = data as number;
+  return used < 0 ? { ok: false, drops_used: null, cycle } : { ok: true, drops_used: used, cycle };
+}

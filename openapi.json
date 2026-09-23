@@ -3388,7 +3388,25 @@
         "type": "object",
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/Drop"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Drop"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "drops": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Drop"
+                    }
+                  }
+                },
+                "required": [
+                  "drops"
+                ]
+              }
+            ]
           },
           "meta": {
             "type": "object",
@@ -11682,8 +11700,8 @@
     "/v1/drops/{id}/duplicate": {
       "post": {
         "operationId": "duplicateDrop",
-        "summary": "Duplicate a drop",
-        "description": "Clones to a new draft; consumes allowance only when scheduled.",
+        "summary": "Duplicate a drop, or bulk-schedule copies to dates",
+        "description": "No body: clones to a new draft (allowance consumed when scheduled). With schedule_at[]: schedules one copy per date, all-or-nothing on the allowance cap.",
         "tags": [
           "Drops"
         ],
@@ -11730,6 +11748,27 @@
             "in": "header"
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule_at": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "minItems": 1,
+                    "maxItems": 52
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Success",
@@ -11743,6 +11782,16 @@
           },
           "401": {
             "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Error. code: ALLOWANCE_EXHAUSTED",
             "content": {
               "application/json": {
                 "schema": {

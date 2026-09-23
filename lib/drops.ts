@@ -3,7 +3,7 @@ import { sanitizeText } from "@/lib/sanitize";
 import { getServiceClient } from "@/lib/supabase/server";
 import { seedDropMeta, seedInventory } from "@/lib/redis";
 import { mintCode } from "@/lib/codes";
-import { consumeDropAllowance, currentCycle, type OrgLimits } from "@/lib/billing/allowance";
+import { consumeDropAllowance, consumeDropAllowanceN, currentCycle, type OrgLimits } from "@/lib/billing/allowance";
 import { upgradeOptions } from "@/lib/billing/tiers";
 import { getOrg } from "@/lib/orgs";
 
@@ -235,7 +235,24 @@ export async function cancelDrop(dropId: string): Promise<DropRecord> {
   return data as DropRecord;
 }
 
-async function cloneToDraft(source: DropRecord, userId: string, extra: { parent_drop_id?: string; duplicated_from_id?: string }): Promise<DropRecord> {
+/** The schedule fields a clone can be born with (bulk duplicate). Absent → a
+ *  blank draft the operator schedules by hand. */
+interface CloneSchedule {
+  live_at: string;
+  live_until: string | null;
+  redeem_from: string;
+  redeem_until: string;
+  redeem_days: number[] | null;
+  redeem_time_start: string | null;
+  redeem_time_end: string | null;
+}
+
+async function cloneToDraft(
+  source: DropRecord,
+  userId: string,
+  extra: { parent_drop_id?: string; duplicated_from_id?: string; schedule?: CloneSchedule },
+): Promise<DropRecord> {
+  const s = extra.schedule;
   const { data, error } = await getServiceClient()
     .from("drops")
     .insert({
@@ -251,13 +268,15 @@ async function cloneToDraft(source: DropRecord, userId: string, extra: { parent_
       quantity_total: source.quantity_total,
       quantity_remaining: source.quantity_total,
       price_cents: source.price_cents,
-      live_at: null, // a clone/encore is scheduled to a NEW date
-      live_until: null,
-      redeem_from: null,
-      redeem_until: null,
-      redeem_days: null,
-      redeem_time_start: null,
-      redeem_time_end: null,
+      // A plain clone/encore is scheduled to a NEW date by hand (all null). A bulk
+      // duplicate is born with its shifted schedule and is transitioned in one step.
+      live_at: s?.live_at ?? null,
+      live_until: s?.live_until ?? null,
+      redeem_from: s?.redeem_from ?? null,
+      redeem_until: s?.redeem_until ?? null,
+      redeem_days: s?.redeem_days ?? null,
+      redeem_time_start: s?.redeem_time_start ?? null,
+      redeem_time_end: s?.redeem_time_end ?? null,
       parent_drop_id: extra.parent_drop_id ?? null,
       duplicated_from_id: extra.duplicated_from_id ?? null,
       created_by: userId,
@@ -272,6 +291,90 @@ async function cloneToDraft(source: DropRecord, userId: string, extra: { parent_
 export async function duplicateDrop(dropId: string, userId: string): Promise<DropRecord> {
   const source = await getDrop(dropId);
   return cloneToDraft(source, userId, { duplicated_from_id: source.id });
+}
+
+/**
+ * Bulk duplicate: schedule N copies of a drop to N go-live dates in one action
+ * (e.g. the four Tuesdays of the month). Still duplicate, NOT a recurrence rule
+ * — N discrete scheduled copies, no stored cadence. Each copy's redemption
+ * window is the source's window shifted to the new go-live by the same offsets,
+ * so a Tuesday-lunch drop lands at the same time of day on every chosen date.
+ *
+ * All-or-nothing on the allowance cap (invariant #2 forbids restoring a partial
+ * consume): the whole batch consumes atomically or nothing schedules. An
+ * operator never ends up with three of four Tuesdays and no signal which failed.
+ */
+export async function bulkDuplicateSchedule(dropId: string, userId: string, scheduleAt: string[]): Promise<DropRecord[]> {
+  const source = await getDrop(dropId);
+  const n = scheduleAt.length;
+  if (n < 1) throw new ApiError("VALIDATION_ERROR", "Provide at least one go-live date.");
+  if (source.lane !== "local") throw new ApiError("VALIDATION_ERROR", "Only Local drops can be scheduled.");
+  if (!source.location_id) throw new ApiError("VALIDATION_ERROR", "A local drop needs a location.");
+  // The window is shifted from the source, so the source must carry one.
+  if (!source.live_at || !source.redeem_from || !source.redeem_until) {
+    throw new ApiError("VALIDATION_ERROR", "The source drop has no schedule to shift. Set its go-live and redemption window first, then bulk-duplicate.");
+  }
+  const t0 = new Date(source.live_at).getTime();
+  const rfOff = new Date(source.redeem_from).getTime() - t0;
+  const ruOff = new Date(source.redeem_until).getTime() - t0;
+  const luOff = source.live_until ? new Date(source.live_until).getTime() - t0 : null;
+
+  // Shift the schedule to each requested date; reject bad or past dates up front.
+  const now = Date.now();
+  const schedules: CloneSchedule[] = scheduleAt.map((raw) => {
+    const t = new Date(raw).getTime();
+    if (Number.isNaN(t)) throw new ApiError("VALIDATION_ERROR", `Not a valid go-live date: ${raw}`);
+    if (t <= now) throw new ApiError("VALIDATION_ERROR", `Go-live date is in the past: ${raw}`);
+    return {
+      live_at: new Date(t).toISOString(),
+      live_until: luOff === null ? null : new Date(t + luOff).toISOString(),
+      redeem_from: new Date(t + rfOff).toISOString(),
+      redeem_until: new Date(t + ruOff).toISOString(),
+      redeem_days: source.redeem_days,
+      redeem_time_start: source.redeem_time_start,
+      redeem_time_end: source.redeem_time_end,
+    };
+  });
+
+  const svc = getServiceClient();
+
+  // 1) Create the draft clones (schedule set, no allowance yet). Drafts are
+  //    disposable pre-schedule, so any failure rolls them back cleanly.
+  const drafts: DropRecord[] = [];
+  try {
+    for (const schedule of schedules) {
+      drafts.push(await cloneToDraft(source, userId, { duplicated_from_id: source.id, schedule }));
+    }
+  } catch (e) {
+    if (drafts.length) await svc.from("drops").delete().in("id", drafts.map((d) => d.id));
+    throw e;
+  }
+  const draftIds = drafts.map((d) => d.id);
+
+  // 2) Consume the whole batch atomically. At the cap, delete the drafts and
+  //    refuse — nothing is scheduled, nothing is consumed.
+  const org = await getOrg(source.org_id);
+  const consumed = await consumeDropAllowanceN(org, source.location_id, n);
+  if (!consumed.ok) {
+    await svc.from("drops").delete().in("id", draftIds);
+    throw dropCapError(org, org.drops_per_cycle);
+  }
+
+  // 3) Transition all N draft → scheduled in one statement — a uniform
+  //    transition (per-row schedule is already set), so it matches the N
+  //    allowance drops just consumed.
+  const { data, error } = await svc
+    .from("drops")
+    .update({ status: "scheduled", updated_at: new Date().toISOString() })
+    .in("id", draftIds)
+    .eq("status", "draft")
+    .select(DROP_COLUMNS);
+  if (error) {
+    const mapped = mapWriteError(error);
+    if (mapped) throw mapped;
+    throw new Error(`bulk schedule failed: ${error.message}`);
+  }
+  return (data as DropRecord[]) ?? [];
 }
 
 /**

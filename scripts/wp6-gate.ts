@@ -127,6 +127,32 @@ async function main(): Promise<void> {
   const usedAfterDup = await usedFor(orgBig);
   check("duplicate creates a new draft (duplicated_from set) and consumes no allowance", dup.status === 201 && dup.body.data?.duplicated_from_id === dImm && dup.body.data?.status === "draft" && usedAfterDup === usedBeforeDup, `dup=${dup.status} from=${dup.body.data?.duplicated_from_id === dImm} used ${usedBeforeDup}→${usedAfterDup}`);
 
+  // BULK DUPLICATE (POSITIVE): schedule N copies to N dates in one action. Each
+  // copy is scheduled, duplicated_from the source, with the source's redemption
+  // window shifted to its new go-live; the batch consumes exactly N allowance.
+  const usedBeforeBulk = await usedFor(orgBig);
+  const bulkDates = [1, 8, 15].map((d) => new Date(Date.now() + d * 86400000).toISOString());
+  const bulk = await api(`/v1/drops/${dImm}/duplicate`, { method: "POST", token: adminToken, body: { schedule_at: bulkDates } });
+  const usedAfterBulk = await usedFor(orgBig);
+  const bulkDrops: any[] = bulk.body.data?.drops ?? [];
+  const wellFormed = bulkDrops.length === 3 && bulkDrops.every((d) => d.status === "scheduled" && d.duplicated_from_id === dImm && d.live_at && d.redeem_from && new Date(d.redeem_from).getTime() > new Date(d.live_at).getTime());
+  const goLivesMatch = bulkDrops.map((d) => new Date(d.live_at).getTime()).sort().join(",") === bulkDates.map((s) => new Date(s).getTime()).sort().join(",");
+  check("bulk duplicate to N dates → N SCHEDULED copies (window shifted to each go-live), consumes exactly N allowance", bulk.status === 201 && wellFormed && goLivesMatch && usedAfterBulk === usedBeforeBulk + 3, `bulk=${bulk.status} n=${bulkDrops.length} scheduled/shifted=${wellFormed} dates=${goLivesMatch}; used ${usedBeforeBulk}→${usedAfterBulk}`);
+
+  // BULK DUPLICATE (NEGATIVE / all-or-nothing): an org with fewer than N drops
+  // remaining refuses the WHOLE batch — 402, zero copies, zero consumed. Never
+  // three of four Tuesdays. orgBulk (local_starter = 2/cycle); one is spent
+  // scheduling the source, so 1 remains and a 2-date batch cannot fit.
+  const orgBulk = (await api("/v1/orgs", { method: "POST", token: owner.token, body: { name: "Bulk Cap Co", tier: "local_starter" } })).body.data.id as string;
+  const locBulk = (await api(`/v1/orgs/${orgBulk}/locations`, { method: "POST", token: owner.token, body: { name: "Bulk Shop", line1: "9 Main", city: "Salt Lake City", region: "UT", postal_code: "84101" } })).body.data.id as string;
+  const srcBulk = (await makeDrop(owner.token, locBulk, true)).body.data.id as string; // scheduled → consumes 1 of 2, carries a window
+  const usedBeforeNeg = await usedFor(orgBulk);
+  const negDates = [1, 8].map((d) => new Date(Date.now() + d * 86400000).toISOString()); // 2 needed, 1 remaining
+  const neg = await api(`/v1/drops/${srcBulk}/duplicate`, { method: "POST", token: owner.token, body: { schedule_at: negDates } });
+  const usedAfterNeg = await usedFor(orgBulk);
+  const negCopies = Number((await pg.query(`select count(*)::int n from drops where duplicated_from_id=$1`, [srcBulk])).rows[0].n);
+  check("bulk duplicate is ALL-OR-NOTHING: a batch over the cap → 402, ZERO copies created, ZERO allowance consumed", neg.status === 402 && neg.body.error?.code === "ALLOWANCE_EXHAUSTED" && usedAfterNeg === usedBeforeNeg && negCopies === 0, `neg=${neg.status} ${neg.body.error?.code}; used ${usedBeforeNeg}→${usedAfterNeg}; copies=${negCopies}`);
+
   // ========================================================================
   // GATE 4/5 — cancel does not restore allowance; upgrade unblocks at cap.
   // Fresh self-serve starter org (owner), 1 location, 2 drops/cycle.
