@@ -331,7 +331,7 @@ Mobile is the product. Limits, not goals.
 |---|---|
 | LCP (board, 4G) | < 2.0s |
 | Initial JS | < 180KB gzipped |
-| Fonts | Inter + Newsreader + JetBrains Mono via `next/font`, subset latin, `display: swap`, self-hosted (CSP `font-src 'self'`) |
+| Fonts | Inter + Newsreader + JetBrains Mono via `next/font`, latin subset, `display: swap`, self-hosted (CSP `font-src 'self'`). **Measured (`npm run build`):** ~142 KB preloaded over the wire — the primary latin slice per family (Inter 47 KB + Newsreader 56 KB + JetBrains Mono 39 KB). On disk the three families total ~402 KB across all subset slices (Inter 213 / Newsreader 103 / JetBrains 84), but `unicode-range` fetches only the slices the text actually renders. |
 | Cinemagraph | 400KB each, lazy, one playing at a time |
 | Board query | < 200ms p95 · CLS < 0.05 |
 
