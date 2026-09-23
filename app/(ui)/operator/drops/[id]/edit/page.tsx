@@ -6,6 +6,7 @@ import { api } from "@/app/(ui)/_lib/api";
 import { useOperator } from "../../../_lib/shell";
 import { toLocalInput, fromLocalInput } from "../../../_lib/datetime";
 import { Paywall, type AllowanceDetails } from "../../../_lib/Paywall";
+import { RedeemWindowField, redeemWindowBody, type RedeemWindowValue } from "../../../_lib/RedeemWindow";
 
 /**
  * Edit drop. Reaches draft/scheduled only — a live drop is immutable
@@ -19,6 +20,12 @@ interface OperatorDrop {
   id: string; title: string; description: string; terms: string | null; status: string;
   quantity_total: number; location_id: string | null;
   live_at: string | null; live_until: string | null; redeem_from: string | null; redeem_until: string | null;
+  redeem_days: number[] | null; redeem_time_start: string | null; redeem_time_end: string | null;
+}
+
+/** "HH:MM:SS" or "HH:MM" → "HH:MM" for the <input type="time"> value. */
+function toTimeInput(t: string | null): string {
+  return t ? t.slice(0, 5) : "";
 }
 
 export default function EditDropPage() {
@@ -35,6 +42,7 @@ export default function EditDropPage() {
   const [liveUntil, setLiveUntil] = useState("");
   const [redeemFrom, setRedeemFrom] = useState("");
   const [redeemUntil, setRedeemUntil] = useState("");
+  const [window, setWindow] = useState<RedeemWindowValue>({ days: [], start: "", end: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -56,6 +64,11 @@ export default function EditDropPage() {
       setLiveUntil(toLocalInput(found.live_until));
       setRedeemFrom(toLocalInput(found.redeem_from));
       setRedeemUntil(toLocalInput(found.redeem_until));
+      setWindow({
+        days: found.redeem_days ?? [],
+        start: toTimeInput(found.redeem_time_start),
+        end: toTimeInput(found.redeem_time_end),
+      });
     })();
     return () => { alive = false; };
   }, [id, org.org_id]);
@@ -83,8 +96,10 @@ export default function EditDropPage() {
     const qty = Number(quantity);
     if (!title.trim() || !description.trim()) { setErr("Title and description are required."); return; }
     if (!Number.isInteger(qty) || qty < 1) { setErr("Quantity must be a whole number, at least one."); return; }
+    const win = redeemWindowBody(window, true); // clear a prior recurring window when the days are emptied
+    if (!win.ok) { setErr(win.error); return; }
     setBusy(true);
-    const r = await api(`/v1/drops/${id}`, { method: "PATCH", body: fieldBody() });
+    const r = await api(`/v1/drops/${id}`, { method: "PATCH", body: { ...fieldBody(), ...win.body } });
     setBusy(false);
     if (r.ok) { setNote("Saved."); return; }
     setErr(r.error?.message ?? "Could not save.");
@@ -134,6 +149,8 @@ export default function EditDropPage() {
             <div><label htmlFor="rf">Redeem from</label><input id="rf" type="datetime-local" value={redeemFrom} onChange={(e) => setRedeemFrom(e.target.value)} /></div>
             <div><label htmlFor="ru">Redeem until</label><input id="ru" type="datetime-local" value={redeemUntil} onChange={(e) => setRedeemUntil(e.target.value)} /></div>
           </div>
+
+          <RedeemWindowField value={window} onChange={setWindow} />
 
           {err && <p className="field-error">{err}</p>}
           {note && <p className="muted">{note}</p>}

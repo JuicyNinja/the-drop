@@ -12,7 +12,7 @@ interface ProfileCard {
   pct_remaining: number; status: string; redeem_until: string | null; gone_at: string | null;
 }
 interface OrgProfile {
-  org_id: string; name: string; lane: string; redemption_rate: number | null;
+  org_id: string; name: string; logo_url: string | null; ground_slug: string; lane: string; redemption_rate: number | null;
   locations: { name: string; city: string; region: string }[];
   live: ProfileCard[]; gone: ProfileCard[];
 }
@@ -56,7 +56,7 @@ export default function MerchantProfilePage() {
   return (
     <div className="page stack profile">
       <div className="profile-head">
-        <LogoBubble name={p.name} />
+        <LogoBubble name={p.name} logoUrl={p.logo_url} groundSlug={p.ground_slug} size="lg" />
         <div>
           <h1 className="profile-name">{p.name}</h1>
           {p.locations[0] && <p className="muted">{p.locations.map((l) => `${l.name}, ${l.city}`).join(" · ")}</p>}

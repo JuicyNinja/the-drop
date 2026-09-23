@@ -218,6 +218,20 @@ A merchant who wants more supply creates an **Encore** — a new, separate drop 
 - The **redemption window** is set by the merchant and is independent of the live window. Example: drop goes live Monday, redemption window is Tuesday 3–6pm.
 - Redemption windows are frequently tight — hours, not days. This is intentional and is what makes the data valuable to merchants (e.g. driving traffic into a dead 3–6pm Tuesday).
 
+**Window shape.** The redemption window has two parts:
+
+- An **outer date range** — the drop's final close. This is the catch's expiry: a catch is redeemable up to the end of the range and no later.
+- An optional **recurring daily window** — specific weekdays and a daily time range (e.g. "Weekdays 10am–3:50pm", "Tue & Thu 3–6pm"). When set, a redemption must fall inside the daily window *and* the outer range. When unset, the window is one continuous span across the outer range.
+
+The daily window is evaluated in the **location's city timezone**, never the buyer's device clock. Every surface that shows a window — card, drop detail, wallet, and the printed code sheet — shows the **full window in natural language** ("Tuesday 10am–3:50pm"), never a bare closing time ("Redeem by Friday 3:50pm").
+
+**Behavior when the window is closed.** A redemption attempted outside the daily window is refused with the next opening time returned, so the buyer knows when to come back. Two behaviors deliberately key on the **final close**, not the daily close, so a catch is never silently stranded:
+
+- **Transfer send cutoff** is 30 minutes before the *final* close. A catch sent at 3:40pm Tuesday is still redeemable Wednesday.
+- The **window-closing push** fires once, before the final close only. Per-day reminders would be noise.
+
+The full window (date range, days, and daily time range) is **frozen at go-live** and joins the live-drop immutability set (§ invariant #3).
+
 ### 4.5 Duplicate
 
 Merchants may **duplicate** any past drop to a new date, edit any field, and publish. This is the primary operator workflow for recurring offers (e.g. the same Tuesday offer across four Tuesdays).

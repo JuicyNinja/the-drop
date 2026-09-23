@@ -22,6 +22,7 @@ export interface OrgRecord {
   lane: string;
   status: string;
   tier: string;
+  logo_url: string | null;
   max_locations: number;
   drops_per_cycle: number;
   drops_pooled_org_level: boolean;
@@ -30,7 +31,7 @@ export interface OrgRecord {
 }
 
 const ORG_COLUMNS =
-  "id, name, lane, status, tier, max_locations, drops_per_cycle, drops_pooled_org_level, cycle_anchor_at, created_at";
+  "id, name, lane, status, tier, logo_url, max_locations, drops_per_cycle, drops_pooled_org_level, cycle_anchor_at, created_at";
 
 export interface LocationRecord {
   id: string;
@@ -65,6 +66,33 @@ export interface CreateOrgInput {
 export async function getOrg(orgId: string): Promise<OrgRecord> {
   const { data, error } = await getServiceClient().from("organizations").select(ORG_COLUMNS).eq("id", orgId).maybeSingle();
   if (error) throw new Error(`load org failed: ${error.message}`);
+  if (!data) throw new ApiError("NOT_FOUND", "No such organization.");
+  return data as OrgRecord;
+}
+
+export interface PatchOrgInput {
+  name?: string;
+  logo_url?: string | null;
+}
+
+/**
+ * Owner-editable org profile fields (name, logo). Limits, tier, and lane are NOT
+ * editable here — they are billing-governed and admin-provisioned (§12.7); this
+ * is the merchant's own branding surface. A logo is stored as its URL (a static
+ * path or a small data: URI), and cleared with null.
+ */
+export async function updateOrg(orgId: string, patch: PatchOrgInput): Promise<OrgRecord> {
+  const update: Record<string, unknown> = {};
+  if (patch.name !== undefined) {
+    const name = sanitizeText(patch.name, 120);
+    if (!name) throw new ApiError("VALIDATION_ERROR", "Invalid name.", { body: [{ path: "name", message: "required" }] });
+    update.name = name;
+  }
+  if (patch.logo_url !== undefined) update.logo_url = patch.logo_url;
+  if (Object.keys(update).length === 0) return getOrg(orgId);
+
+  const { data, error } = await getServiceClient().from("organizations").update(update).eq("id", orgId).select(ORG_COLUMNS).maybeSingle();
+  if (error) throw new Error(`update org failed: ${error.message}`);
   if (!data) throw new ApiError("NOT_FOUND", "No such organization.");
   return data as OrgRecord;
 }

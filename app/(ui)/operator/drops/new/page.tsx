@@ -6,6 +6,7 @@ import { api } from "@/app/(ui)/_lib/api";
 import { useOperator } from "../../_lib/shell";
 import { fromLocalInput } from "../../_lib/datetime";
 import { Paywall, type AllowanceDetails } from "../../_lib/Paywall";
+import { RedeemWindowField, redeemWindowBody, type RedeemWindowValue } from "../../_lib/RedeemWindow";
 
 /**
  * New drop — entered from a location (API-CONTRACT §10; a bare drop form is never
@@ -28,6 +29,7 @@ export default function NewDropPage() {
   const [liveUntil, setLiveUntil] = useState("");
   const [redeemFrom, setRedeemFrom] = useState("");
   const [redeemUntil, setRedeemUntil] = useState("");
+  const [window, setWindow] = useState<RedeemWindowValue>({ days: [], start: "", end: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [paywall, setPaywall] = useState<{ message: string; details: AllowanceDetails } | null>(null);
@@ -38,6 +40,8 @@ export default function NewDropPage() {
     if (!locationId) { setErr("Choose a location."); return; }
     if (!title.trim() || !description.trim()) { setErr("Title and description are required."); return; }
     if (!Number.isInteger(qty) || qty < 1) { setErr("Quantity must be a whole number, at least one."); return; }
+    const win = redeemWindowBody(window, false);
+    if (!win.ok) { setErr(win.error); return; }
 
     setBusy(true);
     const body: Record<string, unknown> = {
@@ -46,6 +50,7 @@ export default function NewDropPage() {
       description: description.trim(),
       quantity_total: qty,
       publish,
+      ...win.body,
     };
     if (terms.trim()) body.terms = terms.trim();
     const live_at = fromLocalInput(liveAt); if (live_at) body.live_at = live_at;
@@ -109,6 +114,8 @@ export default function NewDropPage() {
             <input id="ru" type="datetime-local" value={redeemUntil} onChange={(e) => setRedeemUntil(e.target.value)} />
           </div>
         </div>
+
+        <RedeemWindowField value={window} onChange={setWindow} />
 
         {err && <p className="field-error">{err}</p>}
 

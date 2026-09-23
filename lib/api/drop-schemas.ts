@@ -18,6 +18,9 @@ export const dropResponseSchema = z
     live_until: z.string().nullable(),
     redeem_from: z.string().nullable(),
     redeem_until: z.string().nullable(),
+    redeem_days: z.array(z.number()).nullable(),
+    redeem_time_start: z.string().nullable(),
+    redeem_time_end: z.string().nullable(),
     parent_drop_id: z.string().nullable(),
     duplicated_from_id: z.string().nullable(),
     gone_at: z.string().nullable(),
@@ -26,6 +29,9 @@ export const dropResponseSchema = z
   .openapi("Drop");
 
 const iso = z.string().min(1);
+// Recurring daily window: days as JS DOW (0=Sun…6=Sat) + "HH:MM" city-local times.
+const redeemDays = z.array(z.number().int().min(0).max(6)).min(1).max(7);
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected HH:MM");
 
 export const createDropSchema = z
   .strictObject({
@@ -38,6 +44,9 @@ export const createDropSchema = z
     live_until: iso.optional(),
     redeem_from: iso.optional(),
     redeem_until: iso.optional(),
+    redeem_days: redeemDays.optional(),
+    redeem_time_start: hhmm.optional(),
+    redeem_time_end: hhmm.optional(),
     image_urls: z.array(z.string()).max(10).optional(),
     // Create-and-publish in one call: schedule immediately (402 at cap).
     publish: z.boolean().optional(),
@@ -55,6 +64,9 @@ export const patchDropSchema = z
     live_until: iso.nullable().optional(),
     redeem_from: iso.nullable().optional(),
     redeem_until: iso.nullable().optional(),
+    redeem_days: redeemDays.nullable().optional(),
+    redeem_time_start: hhmm.nullable().optional(),
+    redeem_time_end: hhmm.nullable().optional(),
     image_urls: z.array(z.string()).max(10).optional(),
     // Lifecycle transitions: schedule (consumes allowance) or cancel back to draft.
     status: z.enum(["scheduled", "draft"]).optional(),

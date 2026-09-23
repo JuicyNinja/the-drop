@@ -2292,7 +2292,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2304,6 +2313,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2314,6 +2329,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2329,7 +2345,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2381,7 +2400,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2393,6 +2421,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2403,6 +2437,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2418,7 +2453,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2470,7 +2508,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2482,6 +2529,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2492,6 +2545,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2507,7 +2561,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2569,7 +2626,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2581,6 +2647,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2591,6 +2663,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2606,7 +2679,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2658,7 +2734,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2670,6 +2755,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2680,6 +2771,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2695,7 +2787,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2747,7 +2842,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2759,6 +2863,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2769,6 +2879,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2784,7 +2895,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2846,7 +2960,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2858,6 +2981,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2868,6 +2997,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2883,7 +3013,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -2935,7 +3068,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -2947,6 +3089,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -2957,6 +3105,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -2972,7 +3121,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -3024,7 +3176,16 @@
                             "null"
                           ]
                         },
+                        "redeem_window": {
+                          "type": "string"
+                        },
                         "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
                           "type": "string"
                         },
                         "merchant": {
@@ -3036,6 +3197,12 @@
                             "name": {
                               "type": "string"
                             },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "redemption_rate": {
                               "type": [
                                 "number",
@@ -3046,6 +3213,7 @@
                           "required": [
                             "org_id",
                             "name",
+                            "logo_url",
                             "redemption_rate"
                           ]
                         }
@@ -3061,7 +3229,10 @@
                         "price_cents",
                         "live_until",
                         "redeem_until",
+                        "redeem_window",
                         "status",
+                        "ground_dark",
+                        "ground_slug",
                         "merchant"
                       ]
                     }
@@ -3171,6 +3342,9 @@
                 "expires_at": {
                   "type": "string"
                 },
+                "redeem_window": {
+                  "type": "string"
+                },
                 "drop": {
                   "type": "object",
                   "properties": {
@@ -3195,6 +3369,7 @@
                 "transfer_count",
                 "caught_at",
                 "expires_at",
+                "redeem_window",
                 "drop"
               ]
             }
@@ -3303,6 +3478,27 @@
               "null"
             ]
           },
+          "redeem_days": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number"
+            }
+          },
+          "redeem_time_start": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "redeem_time_end": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "parent_drop_id": {
             "type": [
               "string",
@@ -3342,6 +3538,9 @@
           "live_until",
           "redeem_from",
           "redeem_until",
+          "redeem_days",
+          "redeem_time_start",
+          "redeem_time_end",
           "parent_drop_id",
           "duplicated_from_id",
           "gone_at",
@@ -3433,6 +3632,33 @@
             ],
             "minLength": 1
           },
+          "redeem_days": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "minItems": 1,
+            "maxItems": 7
+          },
+          "redeem_time_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "redeem_time_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
           "image_urls": {
             "type": "array",
             "items": {
@@ -3513,7 +3739,13 @@
                   "null"
                 ]
               },
+              "redeem_window": {
+                "type": "string"
+              },
               "status": {
+                "type": "string"
+              },
+              "ground_slug": {
                 "type": "string"
               },
               "merchant": {
@@ -3524,6 +3756,12 @@
                   },
                   "name": {
                     "type": "string"
+                  },
+                  "logo_url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "redemption_rate": {
                     "type": [
@@ -3561,6 +3799,7 @@
                 "required": [
                   "org_id",
                   "name",
+                  "logo_url",
                   "redemption_rate",
                   "location"
                 ]
@@ -3589,7 +3828,9 @@
               "live_until",
               "redeem_from",
               "redeem_until",
+              "redeem_window",
               "status",
+              "ground_slug",
               "merchant",
               "can_catch",
               "catch_blocked_reason"
@@ -3725,6 +3966,24 @@
           "redeem_until": {
             "type": "string",
             "minLength": 1
+          },
+          "redeem_days": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "minItems": 1,
+            "maxItems": 7
+          },
+          "redeem_time_start": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "redeem_time_end": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
           },
           "image_urls": {
             "type": "array",
@@ -4269,6 +4528,27 @@
                     "null"
                   ]
                 },
+                "redeem_days": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "redeem_time_start": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "redeem_time_end": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "location_id": {
                   "type": [
                     "string",
@@ -4289,6 +4569,9 @@
                 "live_until",
                 "redeem_from",
                 "redeem_until",
+                "redeem_days",
+                "redeem_time_start",
+                "redeem_time_end",
                 "location_id"
               ]
             }
@@ -4408,6 +4691,15 @@
                 "type": "string"
               },
               "name": {
+                "type": "string"
+              },
+              "logo_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ground_slug": {
                 "type": "string"
               },
               "lane": {
@@ -4541,6 +4833,8 @@
             "required": [
               "org_id",
               "name",
+              "logo_url",
+              "ground_slug",
               "lane",
               "redemption_rate",
               "locations",
@@ -4592,6 +4886,12 @@
           "tier": {
             "type": "string"
           },
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "max_locations": {
             "type": "number"
           },
@@ -4614,12 +4914,47 @@
           "lane",
           "status",
           "tier",
+          "logo_url",
           "max_locations",
           "drops_per_cycle",
           "drops_pooled_org_level",
           "cycle_anchor_at",
           "created_at"
         ]
+      },
+      "patchOrgResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Organization"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PatchOrg": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512000
+          }
+        },
+        "additionalProperties": false
       },
       "getScoreboardResponse": {
         "type": "object",
@@ -10614,6 +10949,48 @@
             "schema": {
               "type": "string",
               "enum": [
+                "now",
+                "tonight",
+                "tomorrow_morning",
+                "tomorrow",
+                "this_weekend"
+              ]
+            },
+            "required": false,
+            "name": "redeemable",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "redeemable_date",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "required": false,
+            "name": "redeemable_start",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "required": false,
+            "name": "redeemable_end",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
                 "web",
                 "ios",
                 "android"
@@ -12967,6 +13344,128 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/getOrgResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED | FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchOrg",
+        "summary": "Edit an organization's profile (name, logo)",
+        "tags": [
+          "Merchant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchOrg"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/patchOrgResponse"
                 }
               }
             }

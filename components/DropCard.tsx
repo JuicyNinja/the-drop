@@ -7,6 +7,7 @@ import { LogoBubble } from "./LogoBubble";
 import { GoneStamp } from "./GoneStamp";
 import { SplitFlap } from "./SplitFlap";
 import { FollowButton } from "@/app/(ui)/(buyer)/_lib/FollowButton";
+import { tileWeight, couponSide } from "@/lib/tile-weight";
 
 export interface BoardCard {
   id: string;
@@ -19,14 +20,11 @@ export interface BoardCard {
   price_cents: number | null;
   live_until: string | null;
   redeem_until: string | null;
+  redeem_window: string;
   status: string;
-  merchant: { org_id: string; name: string; redemption_rate: number | null };
-}
-
-function timing(redeemUntil: string | null): string {
-  if (!redeemUntil) return "";
-  const d = new Date(redeemUntil);
-  return `Redeem by ${d.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+  ground_dark: boolean;
+  ground_slug: string;
+  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null };
 }
 
 /**
@@ -53,15 +51,23 @@ export function DropCard({ card, freshArrival = false }: { card: BoardCard; fres
       <div className="card-inner">
         {/* FRONT */}
         <div className="card-face card-front">
-          <LogoBubble name={card.merchant.name} />
           <span className={`chip${gone ? " chip-gone" : ""}`}>
             <SplitFlap value={gone ? "GONE" : "LIVE"} run={chipRun} className="chip-flap" ariaLabel={gone ? "Gone" : "Live"} />
           </span>
 
-          <p className="coupon card-offer">{card.title}</p>
-
-          <div className="card-poster" aria-hidden>
-            <span className="card-poster-mark data">{card.merchant.name.slice(0, 2).toUpperCase()}</span>
+          {/* The drop tile fills the card; the subject is weighted to one third
+              (§15.5) and the coupon print overlays the clean opposite side (§4.1),
+              ink or white per ground, never on a scrim (§4.3). */}
+          <div className={`card-tile card-subj-${tileWeight(card.id)}`}>
+            {card.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- static local tile asset, no loader needed
+              <img className="card-tile-img" src={card.image_url} alt="" loading="lazy" decoding="async" />
+            ) : (
+              <div className="card-poster" aria-hidden>
+                <span className="card-poster-mark data">{card.merchant.name.slice(0, 2).toUpperCase()}</span>
+              </div>
+            )}
+            <p className={`coupon card-offer card-offer-${couponSide(card.id)} ${card.ground_dark ? "coupon-on-dark" : "coupon-on-light"}`}>{card.title}</p>
           </div>
 
           <div className="card-scarcity">
@@ -72,7 +78,10 @@ export function DropCard({ card, freshArrival = false }: { card: BoardCard; fres
           </div>
 
           <div className="card-meta">
-            <span className="card-merchant">{card.merchant.name}</span>
+            <div className="card-merchant-row">
+              <LogoBubble name={card.merchant.name} logoUrl={card.merchant.logo_url} groundSlug={card.ground_slug} size="sm" />
+              <span className="card-merchant">{card.merchant.name}</span>
+            </div>
             {card.merchant.redemption_rate !== null && (
               <span className="card-score">
                 <span className="score-bar" aria-hidden>
@@ -86,22 +95,22 @@ export function DropCard({ card, freshArrival = false }: { card: BoardCard; fres
           {gone && <GoneStamp />}
         </div>
 
-        {/* BACK — the honest side (§4.6): terms, timing, merchant, in Satoshi. */}
+        {/* BACK — the honest side (§4.6): merchant, terms, window, in Satoshi. */}
         <div className="card-face card-back" aria-hidden={!flipped}>
+          <div className="card-back-head">
+            <LogoBubble name={card.merchant.name} logoUrl={card.merchant.logo_url} groundSlug={card.ground_slug} size="lg" />
+            <span className="card-back-merchant">{card.merchant.name}</span>
+          </div>
           <p className="card-back-title">{card.title}</p>
           <dl className="card-back-list">
-            <div>
-              <dt>Merchant</dt>
-              <dd>{card.merchant.name}</dd>
-            </div>
             <div>
               <dt>Remaining</dt>
               <dd className="data">{card.quantity_remaining} of {card.quantity_total}</dd>
             </div>
-            {card.redeem_until && (
+            {card.redeem_window && (
               <div>
                 <dt>Window</dt>
-                <dd>{timing(card.redeem_until)}</dd>
+                <dd>{card.redeem_window}</dd>
               </div>
             )}
           </dl>

@@ -147,7 +147,7 @@ Base 16px. Ratio 1.25 with a display jump.
 **Shadows are mechanical, not soft.** A flap tile is a physical object with a hard edge.
 
 ```css
---sh-logo:  -2px -2px 0 rgba(0,0,0,0.18);          /* logo bubble, top-left edge */
+--sh-logo:  -2px -2px 0 rgba(0,0,0,0.18);          /* logo bubble — wrong-direction pinned-badge shadow */
 --sh-tile:  0 2px 0 var(--board-deep), 0 8px 16px -6px rgba(22,23,27,0.28);
 --sh-lift:  0 4px 0 var(--board-deep), 0 16px 32px -8px rgba(22,23,27,0.34);
 --sh-gone:  0 1px 0 rgba(0,0,0,0.10);              /* the single flat shadow */
@@ -165,33 +165,35 @@ The signature component. Every other surface is subordinate to it.
 
 ```
 ┌──────────────────────────────────────┐
-│ ◉                          [ LIVE ]  │   ◉ = logo bubble, --sh-logo top-left
-│                                      │
-│   FREE COFFEE                        │   coupon print, Bricolage 800/85
-│   WITH ANY APPETIZER                 │
-│                                      │
+│                            [ LIVE ]  │   status chip, top-right
 │ ┌──────────────────────────────────┐ │
-│ │                                  │ │
-│ │   motion-enhanced photo          │ │   16:9, cinemagraph loop
-│ │                                  │ │
-│ └──────────────────────────────────┘ │
-│                                      │
+│ │ ▓▓▓▓▓▓          FREE COFFEE       │ │   the drop tile fills the card (§15).
+│ │ ▓ subj ▓        WITH ANY         │ │   Subject weighted to the LEFT third;
+│ │ ▓▓▓▓▓▓          APPETIZER        │ │   coupon print OVERLAYS the clean RIGHT
+│ └──────────────────────────────────┘ │   negative space — Bricolage 800/85.
 │ ●●●●●●●○○○○○○○○○○○○○    12 left  24% │   pips + Departure Mono
-│                                      │
-│ Maxwell's · 0.8 mi · 3–6pm Tue       │
+│ ◉ Maxwell's                          │   ◉ = logo bubble (40px), left of the name
 │ ▓▓▓▓▓▓▓▓░░ 87% redeemed              │   merchant score
 └──────────────────────────────────────┘
 ```
+
+The coupon print is **overlaid on the drop tile's negative space** (§15.4), not stacked above a separate photo. **The subject weighting and the type block flip left/right together, by drop ID (§15.5):** a right-weighted tile mirrors this — subject in the right third, coupon print on the left. The print sits only on the calm, empty side; it is **ink or white per ground for contrast, never over a scrim** (§15.4 legibility). If a tile does not leave its opposite side clean, the fix is regeneration, not a dark overlay — a scrim turns every card into the same muddy poster.
 
 **Card dimensions are identical on mobile and desktop.** Desktop renders it larger and with motion; the composition never changes. One card design, two sizes.
 
 ### 4.2 The logo bubble
 
-Circular, 40px, top-left, overlapping the card edge by 8px. Carries `--sh-logo` — a hard 2px offset shadow toward the top-left, which is the wrong direction for a light source and therefore reads as a **badge pinned onto the card** rather than a floating element. That wrongness is intentional and is the card's fingerprint.
+Circular, carrying `--sh-logo` — a hard 2px offset shadow, the wrong direction for a light source, so it reads as a **badge pinned onto the card** rather than a floating element. That wrongness is intentional and is the card's fingerprint.
+
+The bubble sits **immediately left of the merchant name**, not in the card corner: **40px on the card front** (beside the merchant line) and **56px on the flip side** (beside the merchant name at the top of the honest face). It holds the merchant's mark. **There is no empty state:** when a merchant has no logo, the bubble shows a **monogram of the merchant's initials on its group ground color** (§15.3) — white on the dark grounds, ink on the light ones, exactly as the coupon print resolves. The identity is always present; only its form (mark vs. monogram) changes.
+
+The mark is set by the operator in Account (uploaded, resized client-side to a small square webp, and stored inline as the org's `logo_url`) and travels on every DTO that renders a card — board, drop detail, wallet, and the business profile.
 
 ### 4.3 Coupon print
 
-The offer line is the loudest type in the product. Condensed, heavy, tight-leaded, ink-colored. It is a printed coupon, not a headline — physical, slightly overbearing, two or three lines maximum.
+The offer line is the loudest type in the product. Condensed, heavy, tight-leaded. It is a printed coupon, not a headline — physical, slightly overbearing, two or three lines maximum.
+
+It **overlays the drop tile's negative space** — the empty side opposite the subject — and flips left/right with the subject by drop ID (§15.5). Its color is **ink or white, chosen per ground for contrast** (§15.3): white over the dark grounds (orange, oxide, steel, teal, moss), ink over the light ones (amber, blush, mint, bone). No scrim, ever — the tile is generated to leave that side clean (§15.4); a tile that doesn't is regenerated.
 
 Truncate at 3 lines. Never shrink to fit; a longer offer wraps to detail instead.
 
@@ -629,6 +631,8 @@ Assembled server-side from three parts. The merchant contributes only the subjec
 ```
 
 The fixed grammar block is a constant. Any change to it changes every tile in the product and is a design decision, not a tuning pass.
+
+**Coupon legibility — the negative space is a contract.** The drop tile's empty two-thirds carry the coupon print overlaid on the card (§4.3), so that side must generate as clean flat ground: no subject bleed, no stray object, no cast shadow reaching into it. The print is ink or white chosen per ground for contrast (§15.3) and **never sits on a scrim** — a dark overlay to force contrast collapses every card into the same muddy poster, which is the exact failure the flat-ground grammar exists to avoid. A tile whose calm side is not clean **fails and is regenerated**; the fix is a better generation, never a treatment layered on a bad one. Generation checks the opposite third for uniformity against the ground and re-rolls the ones that bled.
 
 ### 15.5 Subject weighting
 

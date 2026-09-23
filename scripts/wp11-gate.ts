@@ -155,6 +155,27 @@ async function main(): Promise<void> {
   );
 
   // ========================================================================
+  // "Redeemable when" filter (§4.4): a drop open TOMORROW 7–10am appears under
+  // Tomorrow morning (band 6–11am, location tz) and NOT under Tonight — the
+  // plan-ahead case (catch now, redeem at breakfast). Same /v1/board query the
+  // UI's BoardFilter issues, so this is reachability, not just logic.
+  // ========================================================================
+  const denverDow = (d: Date) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short" }).format(d));
+  const tomorrowDow = (denverDow(new Date()) + 1) % 7;
+  const morningDrop = (await api("/v1/drops", { method: "POST", token: ownerA.token, body: { location_id: A.loc, title: "Breakfast Drop", description: "d", quantity_total: 5, live_at: iso(-2000), live_until: iso(864e5), redeem_from: iso(-1000), redeem_until: iso(7 * 864e5), redeem_days: [tomorrowDow], redeem_time_start: "07:00", redeem_time_end: "10:00", publish: true } })).body.data.id;
+  await api("/v1/admin/scheduler/tick", { method: "POST", token: admin });
+  const liveIds = (b: any) => [...(b.body.data?.local?.on_fire ?? []), ...(b.body.data?.local?.new ?? [])].map((c: any) => c.id);
+  const anytime = liveIds(await api(`/v1/board`, { token: buyer.token }));
+  const tMorning = liveIds(await api(`/v1/board?redeemable=tomorrow_morning`, { token: buyer.token }));
+  const tonight = liveIds(await api(`/v1/board?redeemable=tonight`, { token: buyer.token }));
+  check(
+    "redeemable filter: a drop open tomorrow 7–10am appears under Tomorrow morning and NOT under Tonight",
+    anytime.includes(morningDrop) && tMorning.includes(morningDrop) && !tonight.includes(morningDrop),
+    `anytime has=${anytime.includes(morningDrop)}; tomorrow_morning has=${tMorning.includes(morningDrop)}; tonight has=${tonight.includes(morningDrop)}`,
+  );
+
+  // ========================================================================
   // Public GET /v1/drops/{id}: unauth 200 + can_catch:false + reason; authed states.
   // ========================================================================
   const dPub = await mkDrop(ownerA, A.loc, 5);

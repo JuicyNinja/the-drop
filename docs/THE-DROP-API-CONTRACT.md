@@ -78,7 +78,7 @@ Error:
 | `OUTSIDE_GEOFENCE` | 409 | Good GPS fix, out of radius |
 | `GPS_ACCURACY_INSUFFICIENT` | 422 | Accuracy worse than floor; retry |
 | `INVALID_CODE` | 422 | |
-| `REDEMPTION_WINDOW_CLOSED` | 409 | |
+| `REDEMPTION_WINDOW_CLOSED` | 409 | Outside the redemption window — the final close has passed, or (recurring window) the drop is not open at this day/time. `details` carries `window` (the natural-language window) and `next_open_at` (ISO 8601, or null when it will not open again) |
 | `TRANSFER_CUTOFF_PASSED` | 409 | Inside 30 minutes of window close |
 | `TRANSFER_LIMIT_REACHED` | 409 | One hop only |
 | `TRANSFER_EXPIRED` | 409 | Past the 5-minute accept window |
@@ -360,10 +360,13 @@ Ordered by `redeem_until` ascending.
     "live_until": "...",
     "redeem_from": "...",
     "redeem_until": "...",
+    "redeem_window": "Weekdays 10am–3:50pm",
     "status": "live",
+    "ground_slug": "orange",
     "merchant": {
       "org_id": "uuid",
       "name": "...",
+      "logo_url": "https://… | data:image/webp;base64,… | null",
       "redemption_rate": 0.87,
       "location": { "name": "...", "city": "...", "lat": 0, "lng": 0 }
     },
@@ -374,6 +377,8 @@ Ordered by `redeem_until` ascending.
 ```
 
 `can_catch` is **server-computed** and accounts for auth, location permission, prior catch, and drop state. The client renders it; it does not decide it.
+
+`redeem_window` is the **server-formatted** natural-language window (§4.4), rendered in the location's city timezone — e.g. `"Weekdays 10am–3:50pm"`, `"Tue & Thu 3–6pm"`, `"Tuesday 10am–3:50pm"`. The client displays this string; it never re-derives the window from the raw fields. `redeem_from`/`redeem_until` remain the outer date range (final close and catch expiry). `merchant.logo_url` is the merchant's mark (a static path or an inline `data:` URI), null when unset; `ground_slug` is the group ground for the monogram fallback (§4.2). These fields appear identically on the board card DTO and the wallet catch DTO (`redeem_window`).
 
 `merchant.redemption_rate` is displayed on the card. It is **not** a ranking input.
 
@@ -611,10 +616,14 @@ This is the core browse behavior: a dry cleaner never competes with a taco drop 
 ?tag_id=uuid                (single leaf, or a group to include all its leaves)
 ?address_id=uuid            (defaults to active address)
 ?sort=heat|distance|ending  (default: heat = pct_remaining ascending)
+?redeemable=now|tonight|tomorrow_morning|tomorrow|this_weekend
+?redeemable_date=YYYY-MM-DD &redeemable_start=HH:MM &redeemable_end=HH:MM   (custom band)
 ?cursor= &limit=
 ```
 
 Filter state MUST survive navigation — a buyer who filters to Oil Change, opens a drop, and backs out returns to the filtered board, not the front page.
+
+**`redeemable` — "when could I redeem this?"** Keeps drops whose redemption window is **open at all during the band**, not "open right now" — the use case is planning ahead (catch tonight, redeem at breakfast), so "open now" would hide exactly the drops a planner wants. The band is resolved **server-side in the location's city timezone** (invariant #7): *Now* = now→end of today; *Tonight* = 5pm→midnight; *Tomorrow morning* = 6–11am tomorrow; *Tomorrow* = all of tomorrow; *This weekend* = Sat 00:00→end of Sun; *custom* = the given city-local date + HH:MM band. A drop open tomorrow 7–10am matches *Tomorrow morning* (6–11am) but not *Tonight*. Combines with `tag_id` and `address_id` — "Breakfast & Brunch, tomorrow morning, near Work" is one query. Default is no filter. Applies to the live (catchable) lanes; the recently-Gone strip is unaffected.
 
 ### `PUT /v1/users/me/tags`
 ```json
@@ -732,6 +741,11 @@ carries the same `{ role, org_id, location_id }` scope for each role (a bare rol
 name with no org is meaningless).
 
 ### `GET /v1/orgs/{id}`
+Owner/admin only. Returns the org, including `logo_url` (the merchant mark, null when unset). Limits are the stored row values, never derived from `tier`.
+
+### `PATCH /v1/orgs/{id}`
+Owner/admin only. Edits the org's own profile — `name` and `logo_url` (a static path or an inline `data:` image URI, or null to clear). Tier, lane, and limits are billing-governed and **not** editable here. This is the surface the operator Account screen uses to set the merchant logo (§4.2).
+
 ### `GET /v1/orgs/{id}/scoreboard`
 The persistent top-right scoreboard.
 ```json
@@ -802,8 +816,10 @@ Creation begins from a location — `location_id` is required for `lane='local'`
 
 Returns `402 ALLOWANCE_EXHAUSTED` at the monthly cap, with the same upgrade payload shape. **Soft block:** one-click prorated upgrade, live again in under 60 seconds. Not a hard wall. No overages — overages rebuild volume-based revenue by the back door.
 
+**Redemption window (§4.4).** `redeem_from`/`redeem_until` are the outer date range (final close and catch expiry). An optional recurring daily window narrows each day: `redeem_days` (array of JS day-of-week, 0=Sun…6=Sat), `redeem_time_start`, `redeem_time_end` (`"HH:MM"`, city-local). The three are all-or-nothing (a partial set is `VALIDATION_ERROR`); omit them for one continuous window. Redemption outside the daily window returns `REDEMPTION_WINDOW_CLOSED`. The transfer send-cutoff and the window-closing push both key on the **final close** (`redeem_until`), not the daily close.
+
 ### `PATCH /v1/drops/{id}`
-Returns `DROP_IMMUTABLE` for any change to quantity, price, terms, title, description, or redemption window once status is `live`, `gone`, or `expired`.
+Returns `DROP_IMMUTABLE` for any change to quantity, price, terms, title, description, or redemption window — including `redeem_days`, `redeem_time_start`, `redeem_time_end` — once status is `live`, `gone`, or `expired`. Enforced by the `enforce_live_immutability` database trigger (invariant #3).
 
 ### `POST /v1/drops/{id}/duplicate`
 Clones to a new date. All fields editable before publish. Consumes allowance on schedule.

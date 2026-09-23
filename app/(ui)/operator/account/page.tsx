@@ -6,6 +6,7 @@ import { useOperator } from "../_lib/shell";
 import { Paywall, type AllowanceDetails } from "../_lib/Paywall";
 import { LocationRow, type OpLocation } from "./LocationRow";
 import { StaffManager } from "./StaffManager";
+import { LogoUpload } from "./LogoUpload";
 
 /**
  * Account and billing (API-CONTRACT §10). Limits are the org's stored values,
@@ -139,7 +140,8 @@ export default function AccountPage() {
         )}
       </div>
 
-      {/* Staff seats are owner-managed; staff never see this (PRD §13.6). */}
+      {/* Branding and staff are owner-managed; staff never see these (PRD §13.6). */}
+      {org.role === "merchant_owner" && <LogoUpload orgId={org.org_id} name={org.name} />}
       {org.role === "merchant_owner" && (
         <StaffManager orgId={org.org_id} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
       )}

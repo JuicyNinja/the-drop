@@ -63,10 +63,13 @@ const publicDropSchema = z.object({
   live_until: z.string().nullable(),
   redeem_from: z.string().nullable(),
   redeem_until: z.string().nullable(),
+  redeem_window: z.string(),
   status: z.string(),
+  ground_slug: z.string(),
   merchant: z.object({
     org_id: z.string(),
     name: z.string(),
+    logo_url: z.string().nullable(),
     redemption_rate: z.number().nullable(),
     location: z.object({ name: z.string(), city: z.string(), lat: z.number(), lng: z.number() }).nullable(),
   }),

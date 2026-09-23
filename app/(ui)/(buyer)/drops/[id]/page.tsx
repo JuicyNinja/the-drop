@@ -14,8 +14,10 @@ interface PublicDrop {
   id: string; lane: string; title: string; description: string; terms: string | null;
   image_urls: string[]; quantity_remaining: number; quantity_total: number; pct_remaining: number;
   price_cents: number | null; live_until: string | null; redeem_from: string | null; redeem_until: string | null;
+  redeem_window: string;
   status: string;
-  merchant: { org_id: string; name: string; redemption_rate: number | null; location: { name: string; city: string; lat: number; lng: number } | null };
+  ground_slug: string;
+  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; location: { name: string; city: string; lat: number; lng: number } | null };
   can_catch: boolean; catch_blocked_reason: string | null;
 }
 interface CatchResult { catch_id: string; position_number: number; code: string }
@@ -112,7 +114,6 @@ export default function DropPage() {
   return (
     <div className="page detail">
       <div className="detail-card">
-        <LogoBubble name={drop.merchant.name} />
         <span className={`chip${gone ? " chip-gone" : ""}`}>
           <SplitFlap value={gone ? "GONE" : "LIVE"} run={0} ariaLabel={gone ? "Gone" : "Live"} />
         </span>
@@ -128,9 +129,13 @@ export default function DropPage() {
       <div className="detail-body stack">
         <p className="body">{drop.description}</p>
         {drop.terms && <p className="muted">{drop.terms}</p>}
+        <div className="detail-merchant">
+          <LogoBubble name={drop.merchant.name} logoUrl={drop.merchant.logo_url} groundSlug={drop.ground_slug} size="lg" />
+          <Link href={`/merchants/${drop.merchant.org_id}`} className="inline-link detail-merchant-name">{drop.merchant.name}</Link>
+        </div>
         <dl className="detail-facts">
-          <div><dt>Merchant</dt><dd><Link href={`/merchants/${drop.merchant.org_id}`} className="inline-link">{drop.merchant.name}</Link></dd></div>
           {drop.merchant.location && <div><dt>Where</dt><dd>{drop.merchant.location.name}, {drop.merchant.location.city}</dd></div>}
+          {drop.redeem_window && <div><dt>Window</dt><dd>{drop.redeem_window}</dd></div>}
           {drop.merchant.redemption_rate !== null && <div><dt>Redeemed</dt><dd className="data">{Math.round((drop.merchant.redemption_rate ?? 0) * 100)}%</dd></div>}
         </dl>
 

@@ -9,6 +9,7 @@ import {
   storeIdempotencyResult,
 } from "@/lib/redis";
 import { getServiceClient } from "@/lib/supabase/server";
+import { formatRedeemWindow, type RedeemWindow } from "@/lib/window";
 
 /**
  * THE CATCH CONTRACT (CLAUDE.md §1). Drop-open is a thundering herd; this is
@@ -155,6 +156,7 @@ export interface WalletCatch {
   transfer_count: number;
   caught_at: string;
   expires_at: string;
+  redeem_window: string; // full window in natural language, city-local (§4.4)
   drop: { id: string; title: string };
 }
 
@@ -166,14 +168,24 @@ export async function listCatches(
 ): Promise<WalletCatch[]> {
   let query = getServiceClient()
     .from("catches")
-    .select("id, status, position_number, code, transfer_count, caught_at, expires_at, drops!inner(id, title)")
+    .select("id, status, position_number, code, transfer_count, caught_at, expires_at, drops!inner(id, title, redeem_from, redeem_until, redeem_days, redeem_time_start, redeem_time_end, locations(cities(timezone)))")
     .eq("user_id", userId)
     .order("caught_at", { ascending: false });
   if (status) query = query.eq("status", status);
   const { data, error } = await query;
   if (error) throw new Error(`list catches failed: ${error.message}`);
   return (data ?? []).map((r) => {
-    const drop = r.drops as unknown as { id: string; title: string };
+    const drop = r.drops as unknown as {
+      id: string; title: string;
+      redeem_from: string | null; redeem_until: string | null; redeem_days: number[] | null;
+      redeem_time_start: string | null; redeem_time_end: string | null;
+      locations: { cities: { timezone: string | null } | null } | null;
+    };
+    const tz = drop.locations?.cities?.timezone ?? "America/Denver";
+    const win: RedeemWindow = {
+      redeem_from: drop.redeem_from, redeem_until: drop.redeem_until, redeem_days: drop.redeem_days,
+      redeem_time_start: drop.redeem_time_start, redeem_time_end: drop.redeem_time_end,
+    };
     return {
       id: r.id as string,
       status: r.status as string,
@@ -182,6 +194,7 @@ export async function listCatches(
       transfer_count: r.transfer_count as number,
       caught_at: r.caught_at as string,
       expires_at: r.expires_at as string,
+      redeem_window: formatRedeemWindow(win, tz),
       drop: { id: drop.id, title: drop.title },
     };
   });

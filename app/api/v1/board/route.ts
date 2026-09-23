@@ -21,8 +21,11 @@ const dropCardSchema = z.object({
   price_cents: z.number().nullable(),
   live_until: z.string().nullable(),
   redeem_until: z.string().nullable(),
+  redeem_window: z.string(),
   status: z.string(),
-  merchant: z.object({ org_id: z.string(), name: z.string(), redemption_rate: z.number().nullable() }),
+  ground_dark: z.boolean(),
+  ground_slug: z.string(),
+  merchant: z.object({ org_id: z.string(), name: z.string(), logo_url: z.string().nullable(), redemption_rate: z.number().nullable() }),
 });
 const laneSchema = z.object({ on_fire: z.array(dropCardSchema), new: z.array(dropCardSchema), gone: z.array(dropCardSchema) });
 
@@ -39,6 +42,12 @@ const route = defineRoute(
         address_id: z.uuid().optional(),
         tag_id: z.uuid().optional(),
         sort: z.enum(["heat", "distance", "ending"]).optional(),
+        // "Redeemable when" band (§4.4): a preset, or a custom city-local
+        // date + HH:MM start/end. Resolved to concrete instants server-side.
+        redeemable: z.enum(["now", "tonight", "tomorrow_morning", "tomorrow", "this_weekend"]).optional(),
+        redeemable_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        redeemable_start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+        redeemable_end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
       }),
     },
     response: {
@@ -48,7 +57,10 @@ const route = defineRoute(
   },
   async ({ query, user }) => {
     if (!user) throw new ApiError("UNAUTHENTICATED", "No authenticated user.");
-    const board = await getBoard(user.id, { addressId: query.address_id, tagId: query.tag_id, sort: query.sort });
+    const redeemable = (query.redeemable || query.redeemable_date)
+      ? { preset: query.redeemable, date: query.redeemable_date, start: query.redeemable_start, end: query.redeemable_end }
+      : undefined;
+    const board = await getBoard(user.id, { addressId: query.address_id, tagId: query.tag_id, sort: query.sort, redeemable });
     return { data: board.data as unknown as { local: z.infer<typeof laneSchema>; maker: z.infer<typeof laneSchema>; digital: z.infer<typeof laneSchema> }, meta: board.meta };
   },
 );

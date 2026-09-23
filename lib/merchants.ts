@@ -1,5 +1,7 @@
 import { ApiError } from "@/lib/api/errors";
 import { getServiceClient } from "@/lib/supabase/server";
+import { loadOrgGroundHex } from "@/lib/board";
+import { groundSlug } from "@/lib/ground";
 
 /**
  * The public business profile (PRD §11, invariant #11). A Gone drop is never
@@ -24,6 +26,8 @@ export interface ProfileCard {
 export interface OrgProfile {
   org_id: string;
   name: string;
+  logo_url: string | null;
+  ground_slug: string;
   lane: string;
   redemption_rate: number | null;
   locations: { name: string; city: string; region: string }[];
@@ -53,7 +57,7 @@ export async function getOrgProfile(orgId: string): Promise<OrgProfile> {
 
   const { data: org, error: oErr } = await svc
     .from("organizations")
-    .select("id, name, lane, status")
+    .select("id, name, logo_url, lane, status")
     .eq("id", orgId)
     .maybeSingle();
   if (oErr) throw new Error(`load org failed: ${oErr.message}`);
@@ -62,8 +66,11 @@ export async function getOrgProfile(orgId: string): Promise<OrgProfile> {
   // in search. Only a truly absent org is a 404.
   if (!org) throw new ApiError("NOT_FOUND", "No such business.");
 
-  const { data: ms } = await svc.from("merchant_scores").select("redemption_rate").eq("org_id", orgId).maybeSingle();
-  const { data: locs } = await svc.from("locations").select("name, city, region").eq("org_id", orgId).eq("active", true).order("created_at", { ascending: true });
+  const { data: ms, error: msErr } = await svc.from("merchant_scores").select("redemption_rate").eq("org_id", orgId).maybeSingle();
+  if (msErr) throw new Error(`profile merchant score failed: ${msErr.message}`);
+  const { data: locs, error: locsErr } = await svc.from("locations").select("name, city, region").eq("org_id", orgId).eq("active", true).order("created_at", { ascending: true });
+  if (locsErr) throw new Error(`profile locations failed: ${locsErr.message}`);
+  const groundHex = await loadOrgGroundHex(svc, [orgId]);
 
   const { data: drops, error: dErr } = await svc
     .from("drops")
@@ -84,6 +91,8 @@ export async function getOrgProfile(orgId: string): Promise<OrgProfile> {
   return {
     org_id: org.id as string,
     name: org.name as string,
+    logo_url: (org.logo_url as string | null) ?? null,
+    ground_slug: groundSlug(groundHex.get(orgId) ?? null),
     lane: org.lane as string,
     redemption_rate: (ms?.redemption_rate as number | null) ?? null,
     locations: (locs ?? []).map((l) => ({ name: l.name as string, city: l.city as string, region: l.region as string })),

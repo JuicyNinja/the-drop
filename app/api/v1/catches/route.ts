@@ -98,6 +98,7 @@ const listRoute = defineRoute(
           transfer_count: z.number(),
           caught_at: z.string(),
           expires_at: z.string(),
+          redeem_window: z.string(),
           drop: z.object({ id: z.string(), title: z.string() }),
         }),
       ),

@@ -208,6 +208,7 @@ create table organizations (
   lane                  lane not null,              -- 'local' | 'maker' | 'digital'
   status                org_status not null default 'active',
   tier                  subscription_tier not null,
+  logo_url              text,                       -- merchant mark shown beside the name on every card (§4.2); null → monogram fallback
 
   -- Per-account limits. NEVER derive these from the tier enum at runtime.
   -- Enterprise requires arbitrary values.
@@ -446,8 +447,13 @@ create table drops (
 
   live_at               timestamptz,
   live_until            timestamptz,
-  redeem_from           timestamptz,
-  redeem_until          timestamptz,
+  redeem_from           timestamptz,                     -- outer range: opens (final close = redeem_until)
+  redeem_until          timestamptz,                     -- outer range: final close = catch expiry
+  -- Optional recurring daily window (§4.4), city-local. Null redeem_days = one
+  -- continuous window across the outer range. redeem_days uses JS DOW (0=Sun…6=Sat).
+  redeem_days           smallint[],
+  redeem_time_start     time,
+  redeem_time_end       time,
 
   parent_drop_id        uuid references drops(id),       -- Encore lineage
   duplicated_from_id    uuid references drops(id),       -- Duplicate lineage
@@ -470,6 +476,12 @@ create table drops (
     check (lane = 'local' or price_cents is not null),
   constraint redeem_window_valid
     check (redeem_until is null or redeem_from is null or redeem_until > redeem_from),
+  -- Daily window is end-after-start, and all-or-nothing (days + both times, or none).
+  constraint redeem_daily_valid
+    check (redeem_time_end is null or redeem_time_start is null or redeem_time_end > redeem_time_start),
+  constraint redeem_daily_complete
+    check ((redeem_days is null and redeem_time_start is null and redeem_time_end is null)
+        or (redeem_days is not null and redeem_time_start is not null and redeem_time_end is not null)),
   constraint remaining_never_negative
     check (quantity_remaining >= 0 and quantity_remaining <= quantity_total)
 );
@@ -498,6 +510,9 @@ begin
     or new.terms           is distinct from old.terms
     or new.redeem_from     is distinct from old.redeem_from
     or new.redeem_until    is distinct from old.redeem_until
+    or new.redeem_days       is distinct from old.redeem_days
+    or new.redeem_time_start is distinct from old.redeem_time_start
+    or new.redeem_time_end   is distinct from old.redeem_time_end
     or new.title           is distinct from old.title
     or new.description     is distinct from old.description then
       raise exception 'Drop is immutable once live. Create an Encore instead.';

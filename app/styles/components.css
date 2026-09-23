@@ -70,22 +70,37 @@
 .pip-low .pip-fill { background: var(--flap); }
 
 /* ============================ LOGO BUBBLE (§4.2) ======================= */
+/* The merchant mark sits beside the name (front: 40px; flip side: 56px), not in
+   the card corner. With a logo it clips the mark to the circle; without one it
+   shows a monogram on the group ground color (.lg-<slug>) — never empty. */
 .logo-bubble {
-  position: absolute;
-  top: -8px;
-  left: -8px;
+  flex: 0 0 auto;
   width: 40px;
   height: 40px;
   border-radius: var(--r-pill);
   background: var(--board);
   color: var(--on-board);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--t-md);
+  overflow: hidden;
+  font-size: var(--t-sm);
   box-shadow: var(--sh-logo);
-  z-index: 2;
 }
+.logo-bubble-lg { width: 56px; height: 56px; font-size: var(--t-md); }
+.logo-bubble-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.logo-mono { font-variation-settings: "wght" 600; letter-spacing: 0.02em; }
+/* Monogram ground colors — mirror the §15.3 group grounds; two-class specificity
+   overrides the .logo-bubble default fill (matches the coupon-on-* pattern). */
+.logo-bubble.lg-orange { background: var(--g-orange); color: #fff; }
+.logo-bubble.lg-oxide  { background: var(--g-oxide);  color: #fff; }
+.logo-bubble.lg-steel  { background: var(--g-steel);  color: #fff; }
+.logo-bubble.lg-teal   { background: var(--g-teal);   color: #fff; }
+.logo-bubble.lg-moss   { background: var(--g-moss);   color: #fff; }
+.logo-bubble.lg-amber  { background: var(--g-amber);  color: var(--ink); }
+.logo-bubble.lg-blush  { background: var(--g-blush);  color: var(--ink); }
+.logo-bubble.lg-mint   { background: var(--g-mint);   color: var(--ink); }
+.logo-bubble.lg-bone   { background: var(--g-bone);   color: var(--ink); }
 
 /* ============================ GONE STAMP (§4.9) ======================== */
 .gone-stamp {
@@ -141,7 +156,7 @@
   flex-direction: column;
   gap: var(--s-3);
 }
-.card-front { min-height: 420px; }
+.card-front { min-height: 320px; }
 .card-back {
   position: absolute;
   top: 0;
@@ -166,17 +181,38 @@
 .chip-flap { font-size: var(--t-xs); }
 .chip-gone .sf-tile { background: var(--oxide); }
 
+/* The drop tile fills the card; coupon print overlays the clean negative space. */
+.card-tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--board);
+  border-radius: var(--r-field);
+  overflow: hidden;
+}
+.card-tile-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .card-offer {
-  margin: var(--s-5) 0 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56%;
+  margin: 0;
+  padding: 0 var(--s-4);
+  font-size: var(--t-xl);
+  line-height: 0.98;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.card-offer-left { left: 0; text-align: left; }
+.card-offer-right { right: 0; text-align: right; }
+/* Two-class specificity so these beat the base .coupon ink color (§4.3). */
+.card-offer.coupon-on-dark { color: #fff; }
+.card-offer.coupon-on-light { color: var(--ink); }
 .card-poster {
-  aspect-ratio: 16 / 9;
+  position: absolute;
+  inset: 0;
   background: var(--board);
-  border-radius: var(--r-field);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,6 +237,11 @@
   flex-direction: column;
   gap: var(--s-2);
   margin-top: auto;
+}
+.card-merchant-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
 }
 .card-merchant {
   font-size: var(--t-sm);
@@ -256,11 +297,23 @@
 .card-gone { filter: grayscale(1); pointer-events: none; }
 .card-gone .card-face { box-shadow: var(--sh-gone); }
 
+.card-back-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+}
+.card-back-merchant {
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 600;
+  font-size: var(--t-md);
+  color: var(--ink);
+}
 .card-back-title {
   font-family: var(--font-display);
   font-variation-settings: "wght" 600;
   font-size: var(--t-lg);
-  margin: var(--s-5) 0 0;
+  margin: var(--s-4) 0 0;
 }
 .card-back-list { margin: 0; display: flex; flex-direction: column; gap: var(--s-4); }
 .card-back-list div { display: flex; flex-direction: column; gap: 2px; }
@@ -374,6 +427,8 @@
 }
 .detail-offer { margin: var(--s-5) 0 0; }
 .detail-body { }
+.detail-merchant { display: flex; align-items: center; gap: var(--s-3); }
+.detail-merchant-name { font-family: var(--font-display); font-variation-settings: "wght" 600; font-size: var(--t-md); }
 .detail-facts { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s-5); }
 .detail-facts div { display: flex; flex-direction: column; gap: 2px; }
 .detail-facts dt { font-size: var(--t-xs); color: var(--grey); }
@@ -431,6 +486,7 @@
 .wallet-body { flex: 1; min-width: 0; }
 .wallet-title { margin: 0; font-size: var(--t-md); }
 .wallet-status { margin: 2px 0 0; font-size: var(--t-sm); }
+.wallet-window { margin: 2px 0 0; font-size: var(--t-xs); }
 .wallet-send-btn { min-height: 40px; padding: var(--s-2) var(--s-4); }
 .send-tab { max-width: 460px; }
 .handle-hits { list-style: none; margin: var(--s-2) 0 0; padding: 0; border: 1px solid var(--hairline); border-radius: var(--r-field); overflow: hidden; }
@@ -620,6 +676,8 @@
 .board-filter-hit:hover { background: var(--hall-sunk); }
 .board-filter-chip { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-1) var(--s-3); border: 1px solid var(--signal); color: var(--signal); border-radius: var(--r-pill); }
 .board-filter-clear { background: none; border: none; color: inherit; cursor: pointer; font-size: var(--t-md); line-height: 1; padding: 0; }
+.board-filter-custom { display: inline-flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.board-filter-custom input { padding: var(--s-1) var(--s-2); border: 1px solid var(--hairline); border-radius: var(--r-field); background: var(--hall); font-family: var(--font-ui); }
 .board-filter-sort { display: inline-flex; align-items: center; gap: var(--s-2); }
 .board-filter-sort select { padding: var(--s-1) var(--s-3); border: 1px solid var(--hairline); border-radius: var(--r-field); background: var(--hall); font-family: var(--font-ui); }
 

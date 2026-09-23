@@ -7,6 +7,7 @@ export const orgResponseSchema = z
     lane: z.string(),
     status: z.string(),
     tier: z.string(),
+    logo_url: z.string().nullable(),
     max_locations: z.number(),
     drops_per_cycle: z.number(),
     drops_pooled_org_level: z.boolean(),
@@ -14,6 +15,21 @@ export const orgResponseSchema = z
     created_at: z.string(),
   })
   .openapi("Organization");
+
+// A logo is a small square mark: either a local static path or an inline data:
+// URI (the operator upload resizes client-side to a compact webp). Capped so an
+// oversized upload is rejected at the edge, not stored.
+const logoUrl = z
+  .string()
+  .max(512_000)
+  .refine((s) => s.startsWith("data:image/") || s.startsWith("/"), "expected an image data: URI or a local path");
+
+export const patchOrgSchema = z
+  .strictObject({
+    name: z.string().min(1).max(120).optional(),
+    logo_url: logoUrl.nullable().optional(),
+  })
+  .openapi("PatchOrg");
 
 export const createOrgSchema = z
   .strictObject({

@@ -31,6 +31,8 @@ const route = defineRoute(
       data: z.object({
         org_id: z.string(),
         name: z.string(),
+        logo_url: z.string().nullable(),
+        ground_slug: z.string(),
         lane: z.string(),
         redemption_rate: z.number().nullable(),
         locations: z.array(z.object({ name: z.string(), city: z.string(), region: z.string() })),

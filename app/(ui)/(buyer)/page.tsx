@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 import { DropCard, type BoardCard } from "@/components/DropCard";
-import { BoardFilter, type BoardSort } from "@/app/(ui)/(buyer)/_lib/BoardFilter";
+import { BoardFilter, type BoardSort, type RedeemFilter } from "@/app/(ui)/(buyer)/_lib/BoardFilter";
 import { CategoryChips } from "@/app/(ui)/(buyer)/_lib/CategoryChips";
 
 interface Lane { on_fire: BoardCard[]; new: BoardCard[]; gone: BoardCard[] }
@@ -33,6 +33,12 @@ function BoardView() {
   const [error, setError] = useState<string | null>(null);
   const [tag, setTag] = useState<{ id: string; label: string } | null>(null);
   const [sort, setSort] = useState<BoardSort>("heat");
+  const [redeem, setRedeem] = useState<RedeemFilter>({ kind: "none" });
+
+  // Serialize the redeem filter into query params (custom needs a complete band).
+  const redeemKey = redeem.kind === "preset" ? redeem.preset
+    : redeem.kind === "custom" && redeem.date && redeem.start && redeem.end ? `c:${redeem.date}:${redeem.start}:${redeem.end}`
+    : "";
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +46,12 @@ function BoardView() {
       const params = new URLSearchParams();
       if (tag) params.set("tag_id", tag.id);
       if (sort) params.set("sort", sort);
+      if (redeem.kind === "preset") params.set("redeemable", redeem.preset);
+      else if (redeem.kind === "custom" && redeem.date && redeem.start && redeem.end) {
+        params.set("redeemable_date", redeem.date);
+        params.set("redeemable_start", redeem.start);
+        params.set("redeemable_end", redeem.end);
+      }
       const qs = params.toString();
       const r = await api<Board>(`/v1/board${qs ? `?${qs}` : ""}`);
       if (!alive) return;
@@ -49,10 +61,10 @@ function BoardView() {
     load();
     const t = setInterval(load, 30_000); // refresh; Gone cards leave after 5 min
     return () => { alive = false; clearInterval(t); };
-  }, [tag, sort]);
+  }, [tag, sort, redeemKey]); // eslint-disable-line react-hooks/exhaustive-deps -- redeemKey captures the redeem filter
 
   const filter = (
-    <BoardFilter tag={tag} sort={sort} onPickTag={setTag} onClearTag={() => setTag(null)} onSort={setSort} />
+    <BoardFilter tag={tag} sort={sort} redeem={redeem} onPickTag={setTag} onClearTag={() => setTag(null)} onSort={setSort} onRedeem={setRedeem} />
   );
 
   if (error) return <div className="board-hall"><div className="board-head"><h1 className="board-title">The board</h1></div>{filter}<p className="board-empty">{error}</p></div>;

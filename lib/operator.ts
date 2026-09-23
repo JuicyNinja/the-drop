@@ -22,7 +22,8 @@ export interface Scoreboard {
 }
 
 async function orgDropIds(orgId: string): Promise<string[]> {
-  const { data } = await getServiceClient().from("drops").select("id").eq("org_id", orgId);
+  const { data, error } = await getServiceClient().from("drops").select("id").eq("org_id", orgId);
+  if (error) throw new Error(`org drop ids load failed: ${error.message}`);
   return (data ?? []).map((d) => d.id as string);
 }
 
@@ -31,21 +32,26 @@ export async function getScoreboard(orgId: string): Promise<Scoreboard> {
   const org = await getOrg(orgId);
   const cycle = currentCycle(org.cycle_anchor_at);
 
-  const { count: used } = await svc.from("drops").select("id", { count: "exact", head: true })
+  const { count: used, error: usedErr } = await svc.from("drops").select("id", { count: "exact", head: true })
     .eq("org_id", orgId).neq("status", "draft").gte("created_at", cycle.start);
+  if (usedErr) throw new Error(`scoreboard drops-used count failed: ${usedErr.message}`);
   const dropsUsed = used ?? 0;
 
-  const { count: live } = await svc.from("drops").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("status", "live");
+  const { count: live, error: liveErr } = await svc.from("drops").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("status", "live");
+  if (liveErr) throw new Error(`scoreboard live count failed: ${liveErr.message}`);
 
   const dropIds = await orgDropIds(orgId);
   let catches = 0, redemptions = 0;
   if (dropIds.length > 0) {
     const c = await svc.from("catches").select("id", { count: "exact", head: true }).in("drop_id", dropIds);
+    if (c.error) throw new Error(`scoreboard catches count failed: ${c.error.message}`);
     catches = c.count ?? 0;
     const r = await svc.from("redemptions").select("id", { count: "exact", head: true }).in("drop_id", dropIds);
+    if (r.error) throw new Error(`scoreboard redemptions count failed: ${r.error.message}`);
     redemptions = r.count ?? 0;
   }
-  const { count: whispers } = await svc.from("whispers").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+  const { count: whispers, error: whispersErr } = await svc.from("whispers").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+  if (whispersErr) throw new Error(`scoreboard whispers count failed: ${whispersErr.message}`);
 
   return {
     drops_used: dropsUsed,
@@ -72,6 +78,9 @@ export interface OperatorDrop {
   live_until: string | null;
   redeem_from: string | null;
   redeem_until: string | null;
+  redeem_days: number[] | null;
+  redeem_time_start: string | null;
+  redeem_time_end: string | null;
   location_id: string | null;
 }
 
@@ -84,7 +93,7 @@ export interface OperatorDrop {
 export async function listOrgDrops(orgId: string): Promise<OperatorDrop[]> {
   const { data, error } = await getServiceClient()
     .from("drops")
-    .select("id, title, description, terms, status, quantity_total, quantity_remaining, price_cents, live_at, live_until, redeem_from, redeem_until, location_id")
+    .select("id, title, description, terms, status, quantity_total, quantity_remaining, price_cents, live_at, live_until, redeem_from, redeem_until, redeem_days, redeem_time_start, redeem_time_end, location_id")
     .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -97,6 +106,8 @@ export async function listOrgDrops(orgId: string): Promise<OperatorDrop[]> {
     price_cents: (d.price_cents as number | null) ?? null,
     live_at: (d.live_at as string | null) ?? null, live_until: (d.live_until as string | null) ?? null,
     redeem_from: (d.redeem_from as string | null) ?? null, redeem_until: (d.redeem_until as string | null) ?? null,
+    redeem_days: (d.redeem_days as number[] | null) ?? null,
+    redeem_time_start: (d.redeem_time_start as string | null) ?? null, redeem_time_end: (d.redeem_time_end as string | null) ?? null,
     location_id: (d.location_id as string | null) ?? null,
   }));
 }
@@ -120,8 +131,10 @@ export async function getDropStats(dropId: string): Promise<DropStats> {
   if (error) throw new Error(`load drop failed: ${error.message}`);
   if (!drop) throw new ApiError("NOT_FOUND", "No such drop.");
 
-  const { count: catches } = await svc.from("catches").select("id", { count: "exact", head: true }).eq("drop_id", dropId);
-  const { data: reds } = await svc.from("redemptions").select("method").eq("drop_id", dropId);
+  const { count: catches, error: catchErr } = await svc.from("catches").select("id", { count: "exact", head: true }).eq("drop_id", dropId);
+  if (catchErr) throw new Error(`drop stats catch count failed: ${catchErr.message}`);
+  const { data: reds, error: redsErr } = await svc.from("redemptions").select("method").eq("drop_id", dropId);
+  if (redsErr) throw new Error(`drop stats redemptions failed: ${redsErr.message}`);
   const redemptions = (reds ?? []).length;
   const gpsVerified = (reds ?? []).filter((r) => r.method === "gps_verified").length;
   const unverified = (reds ?? []).filter((r) => r.method === "unverified_timeout").length;

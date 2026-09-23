@@ -94,6 +94,27 @@
 .op-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-4); }
 .op-form-actions { display: flex; gap: var(--s-3); }
 
+/* Recurring redemption window (§4.4) */
+.rw { border: 1px solid var(--hairline); border-radius: var(--r-field); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); margin: 0; }
+.rw-legend { font-size: var(--t-sm); color: var(--ink); padding: 0 var(--s-2); }
+.rw-hint { font-size: var(--t-xs); margin: 0; }
+.rw-days { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.rw-day {
+  min-width: 40px; padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline); border-radius: var(--r-pill);
+  background: var(--hall); color: var(--ink); font-size: var(--t-sm); cursor: pointer;
+}
+.rw-day[data-on] { background: var(--ink); color: var(--hall); border-color: var(--ink); }
+.rw-times { margin: 0; }
+.rw:disabled { opacity: 0.5; }
+
+/* Logo control (§4.2) */
+.op-logo-row { display: flex; align-items: center; gap: var(--s-4); }
+.op-logo-actions { display: flex; gap: var(--s-3); align-items: center; }
+.op-logo-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.op-logo-btn { cursor: pointer; }
+.op-logo-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
 /* Paywall */
 .op-paywall { background: var(--hall-sunk); border: 1px solid var(--hairline); border-radius: var(--r-tile); padding: var(--s-5); }
 .op-paywall-msg { font-family: var(--font-display); font-weight: 700; font-size: var(--t-md); color: var(--ink); }

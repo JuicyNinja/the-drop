@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
+import { groundSlug } from "@/lib/ground";
 
 /**
  * Category chips — the group-level browse furniture (DESIGN-SYSTEM §15.2).
@@ -24,12 +25,8 @@ interface Group {
   leaves: { id: string; label: string; slug: string }[];
 }
 
-// The 9 grounds (§15.3), hex → token name for the label-backing class.
-const GROUND: Record<string, string> = {
-  "#F25C05": "orange", "#F5B428": "amber", "#C0271A": "oxide", "#2E5A78": "steel",
-  "#1E7A6F": "teal", "#5E7444": "moss", "#E4826E": "blush", "#58B89C": "mint", "#EDE6D8": "bone",
-};
-const groundClass = (hex: string | null) => `chip-ground-${(hex && GROUND[hex.toUpperCase()]) || "bone"}`;
+// The 9 grounds (§15.3): hex → token name for the label-backing class (lib/ground).
+const groundClass = (hex: string | null) => `chip-ground-${groundSlug(hex)}`;
 
 export function CategoryChips({
   activeId, onPick, onClear,

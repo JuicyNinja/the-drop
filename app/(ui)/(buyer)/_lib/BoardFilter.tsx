@@ -18,14 +18,31 @@ const SORTS: { key: BoardSort; label: string }[] = [
   { key: "ending", label: "Ending soon" },
 ];
 
+// "Redeemable when" — plan ahead: a drop matches if its window is open AT ALL
+// during the band, not necessarily right now. Default is no filter.
+export type RedeemPreset = "now" | "tonight" | "tomorrow_morning" | "tomorrow" | "this_weekend";
+export type RedeemFilter =
+  | { kind: "none" }
+  | { kind: "preset"; preset: RedeemPreset }
+  | { kind: "custom"; date: string; start: string; end: string };
+const REDEEM_PRESETS: { key: RedeemPreset; label: string }[] = [
+  { key: "now", label: "Now" },
+  { key: "tonight", label: "Tonight" },
+  { key: "tomorrow_morning", label: "Tomorrow morning" },
+  { key: "tomorrow", label: "Tomorrow" },
+  { key: "this_weekend", label: "This weekend" },
+];
+
 export function BoardFilter({
-  tag, sort, onPickTag, onClearTag, onSort,
+  tag, sort, redeem, onPickTag, onClearTag, onSort, onRedeem,
 }: {
   tag: { id: string; label: string } | null;
   sort: BoardSort;
+  redeem: RedeemFilter;
   onPickTag: (t: { id: string; label: string }) => void;
   onClearTag: () => void;
   onSort: (s: BoardSort) => void;
+  onRedeem: (r: RedeemFilter) => void;
 }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<TagHit[]>([]);
@@ -65,6 +82,29 @@ export function BoardFilter({
           </div>
         )}
       </div>
+      <label className="board-filter-sort">
+        <span className="op-switcher-label">Redeemable</span>
+        <select
+          value={redeem.kind === "preset" ? redeem.preset : redeem.kind}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "none") onRedeem({ kind: "none" });
+            else if (v === "custom") onRedeem({ kind: "custom", date: "", start: "09:00", end: "17:00" });
+            else onRedeem({ kind: "preset", preset: v as RedeemPreset });
+          }}
+        >
+          <option value="none">Any time</option>
+          {REDEEM_PRESETS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      {redeem.kind === "custom" && (
+        <div className="board-filter-custom">
+          <input type="date" aria-label="Redeemable date" value={redeem.date} onChange={(e) => onRedeem({ ...redeem, date: e.target.value })} />
+          <input type="time" aria-label="Redeemable from" value={redeem.start} onChange={(e) => onRedeem({ ...redeem, start: e.target.value })} />
+          <input type="time" aria-label="Redeemable to" value={redeem.end} onChange={(e) => onRedeem({ ...redeem, end: e.target.value })} />
+        </div>
+      )}
       <label className="board-filter-sort">
         <span className="op-switcher-label">Sort</span>
         <select value={sort} onChange={(e) => onSort(e.target.value as BoardSort)}>

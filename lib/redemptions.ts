@@ -7,6 +7,7 @@ import {
 } from "@/lib/redis";
 import { getServiceClient } from "@/lib/supabase/server";
 import { distanceMiles } from "@/lib/geo/distance";
+import { isDailyWindowOpen, nextDailyOpen, formatRedeemWindow, type RedeemWindow } from "@/lib/window";
 import { recordRedemptionClout } from "@/lib/clout";
 
 /**
@@ -129,7 +130,7 @@ export async function redeem(
 
   const { data: drop, error: dErr } = await svc
     .from("drops")
-    .select("id, code, location_id")
+    .select("id, code, location_id, redeem_from, redeem_until, redeem_days, redeem_time_start, redeem_time_end")
     .eq("id", catchRow.drop_id)
     .maybeSingle();
   if (dErr) throw new Error(`load drop failed: ${dErr.message}`);
@@ -148,6 +149,28 @@ export async function redeem(
     .maybeSingle();
   if (lErr) throw new Error(`load location failed: ${lErr.message}`);
   if (!loc) throw new Error("drop location missing");
+
+  // Recurring daily window (PRD §4.4): a redemption must fall inside the drop's
+  // daily window, evaluated in the location's city timezone. The final close /
+  // catch expiry (redeem_until) is checked above; this is the per-day gate. A
+  // continuous window (null redeem_days) is always open here. Checked BEFORE the
+  // GPS branch so a closed window fails fast, and returns the next opening so the
+  // buyer knows when to come back.
+  const { data: cityRow, error: czErr } = await svc.from("cities").select("timezone").eq("id", loc.city_id).maybeSingle();
+  if (czErr) throw new Error(`load city timezone failed: ${czErr.message}`);
+  const tz = (cityRow?.timezone as string | null) ?? "America/Denver";
+  const win: RedeemWindow = {
+    redeem_from: (drop.redeem_from as string | null) ?? null, redeem_until: (drop.redeem_until as string | null) ?? null,
+    redeem_days: (drop.redeem_days as number[] | null) ?? null,
+    redeem_time_start: (drop.redeem_time_start as string | null) ?? null, redeem_time_end: (drop.redeem_time_end as string | null) ?? null,
+  };
+  if (!isDailyWindowOpen(win, tz)) {
+    const next = nextDailyOpen(win, tz);
+    return fail("REDEMPTION_WINDOW_CLOSED", "This offer isn't open for redemption right now.", {
+      window: formatRedeemWindow(win, tz),
+      next_open_at: next ? next.toISOString() : null,
+    });
+  }
 
   // --- the two-path GPS model ---
   let method: "gps_verified" | "unverified_timeout";
@@ -201,7 +224,8 @@ export async function redeem(
   if (!acquired || acquired.length === 0) {
     // Lost the race: the catch was moved (redeemed already, or transfer_pending)
     // between the load and here. Re-read to report precisely without leaking.
-    const { data: fresh } = await svc.from("catches").select("status").eq("id", input.catch_id).maybeSingle();
+    const { data: fresh, error: freshErr } = await svc.from("catches").select("status").eq("id", input.catch_id).maybeSingle();
+    if (freshErr) throw new Error(`re-read catch failed: ${freshErr.message}`);
     if ((fresh?.status as string | undefined) === "redeemed") {
       return fail("ALREADY_REDEEMED", "This catch has already been redeemed.");
     }
@@ -231,7 +255,8 @@ export async function redeem(
     if (rErr.code === "23505") return fail("ALREADY_REDEEMED", "This catch has already been redeemed.");
     // Genuine write failure after we flipped the catch: roll it back to held so
     // it is not stranded as redeemed with no redemption row.
-    await svc.from("catches").update({ status: "held" }).eq("id", input.catch_id).eq("status", "redeemed");
+    const { error: rbErr } = await svc.from("catches").update({ status: "held" }).eq("id", input.catch_id).eq("status", "redeemed");
+    if (rbErr) throw new Error(`redemption insert failed: ${rErr.message}; rollback to held also failed (catch stranded redeemed): ${rbErr.message}`);
     throw new Error(`redemption insert failed: ${rErr.message}`);
   }
 

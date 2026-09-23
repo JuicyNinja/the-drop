@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/app/(ui)/_lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 
-interface Catch { id: string; status: string; position_number: number; code: string; transfer_count: number; expires_at: string; drop: { id: string; title: string } }
+interface Catch { id: string; status: string; position_number: number; code: string; transfer_count: number; expires_at: string; redeem_window: string; drop: { id: string; title: string } }
 interface Incoming { id: string; from_handle: string; position_number: number; drop_title: string; accept_by: string }
 interface Hit { handle: string; display_name: string }
 
@@ -20,6 +20,7 @@ function WalletTab({ catches, onSend }: { catches: Catch[]; onSend: (c: Catch) =
           <div className="wallet-body">
             <p className="wallet-title">{c.drop.title}</p>
             <p className="muted wallet-status">{c.status === "held" ? "Held" : c.status === "transfer_pending" ? "Transfer pending" : c.status === "redeemed" ? "Redeemed" : "Expired"} · code <span className="data">{c.code}</span></p>
+            {c.redeem_window && <p className="muted wallet-window">{c.redeem_window}</p>}
           </div>
           {c.status === "held" && c.transfer_count < 1 && (
             <button className="btn-secondary wallet-send-btn" onClick={() => onSend(c)}>Send</button>

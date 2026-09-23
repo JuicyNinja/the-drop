@@ -137,6 +137,53 @@ async function main(): Promise<void> {
   const buyerToday = await api(`/v1/locations/${loc}/today`, { token: buyer.token });
   check("Today's Code is not readable by an unrelated buyer", buyerToday.status === 403, `${buyerToday.status} ${buyerToday.body.error?.code}`);
 
+  // ========================================================================
+  // GATE — Recurring redemption window (§4.4), evaluated in the LOCATION city
+  // timezone (America/Denver here). A drop is CATCHABLE while its daily window
+  // is closed (catch ≠ redeem); redeeming outside it returns
+  // REDEMPTION_WINDOW_CLOSED with the next opening; redeeming inside it succeeds.
+  // ========================================================================
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const denver = (d: Date) => {
+    const p: Record<string, string> = {};
+    for (const part of new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d)) p[part.type] = part.value;
+    const hour = p.hour === "24" ? 0 : parseInt(p.hour, 10);
+    return { dow: DOW.indexOf(p.weekday), min: hour * 60 + parseInt(p.minute, 10) };
+  };
+  const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  const nowD = denver(new Date());
+  const tomorrowDow = (nowD.dow + 1) % 7;
+
+  // CLOSED today: valid only TOMORROW, 10:00–15:00 Denver. Deterministic
+  // regardless of the wall clock — today is never a valid day.
+  const closedDrop = (await api("/v1/drops", { method: "POST", token: owner.token, body: { location_id: loc, title: "Window Drop", description: "d", quantity_total: 3, live_at: iso(-2000), live_until: iso(864e5), redeem_from: iso(-1000), redeem_until: iso(7 * 864e5), redeem_days: [tomorrowDow], redeem_time_start: "10:00", redeem_time_end: "15:00", publish: true } })).body.data.id;
+  await api("/v1/admin/scheduler/tick", { method: "POST", token: admin });
+  const wc = await api("/v1/catches", { method: "POST", token: buyer.token, idem: `wc-${closedDrop}-${stamp}`, body: { drop_id: closedDrop } });
+  check(
+    "recurring window: a drop is CATCHABLE while its redemption window is not yet open (catch ≠ redeem)",
+    wc.status === 201 && !!wc.body.data?.catch_id && !!wc.body.data?.code,
+    `catch=${wc.status}; has code=${!!wc.body.data?.code}`,
+  );
+  const wcRedeem = await api("/v1/redemptions", { method: "POST", token: buyer.token, idem: randomUUID(), body: { catch_id: wc.body.data?.catch_id, code: wc.body.data?.code, location: { ...SLC, accuracy_m: 8 }, gps_status: "fix_acquired" } });
+  const det = wcRedeem.body.error?.details ?? {};
+  const nextD = det.next_open_at ? denver(new Date(det.next_open_at)) : null;
+  check(
+    "recurring window: redeeming outside the daily window → REDEMPTION_WINDOW_CLOSED with next opening in the LOCATION tz",
+    wcRedeem.status === 409 && wcRedeem.body.error?.code === "REDEMPTION_WINDOW_CLOSED" && typeof det.window === "string" && det.window.length > 0 && nextD?.dow === tomorrowDow && nextD?.min === 600,
+    `${wcRedeem.status} ${wcRedeem.body.error?.code}; window="${det.window}"; next_open_at=${det.next_open_at} → Denver dow=${nextD?.dow}(want ${tomorrowDow}) min=${nextD?.min}(want 600)`,
+  );
+
+  // OPEN now: today, a ±2h band around the current Denver time.
+  const openDrop = (await api("/v1/drops", { method: "POST", token: owner.token, body: { location_id: loc, title: "Open Window", description: "d", quantity_total: 3, live_at: iso(-2000), live_until: iso(864e5), redeem_from: iso(-1000), redeem_until: iso(7 * 864e5), redeem_days: [nowD.dow], redeem_time_start: hhmm(Math.max(0, nowD.min - 120)), redeem_time_end: hhmm(Math.min(1439, nowD.min + 120)), publish: true } })).body.data.id;
+  await api("/v1/admin/scheduler/tick", { method: "POST", token: admin });
+  const wo = await api("/v1/catches", { method: "POST", token: buyer.token, idem: `wo-${openDrop}-${stamp}`, body: { drop_id: openDrop } });
+  const woRedeem = await api("/v1/redemptions", { method: "POST", token: buyer.token, idem: randomUUID(), body: { catch_id: wo.body.data?.catch_id, code: wo.body.data?.code, location: { ...SLC, accuracy_m: 8 }, gps_status: "fix_acquired" } });
+  check(
+    "recurring window: redeeming INSIDE the daily window succeeds",
+    wo.status === 201 && woRedeem.status === 201 && woRedeem.body.data?.redeemed === true,
+    `catch=${wo.status}; redeem=${woRedeem.status} ${woRedeem.body.error?.code ?? "ok"}`,
+  );
+
   await pg.end();
   console.log("\nWP-8 redemption gate against " + BASE + "\n");
   for (const r of results) { console.log(`  [${r.pass ? "PASS" : "FAIL"}] ${r.name}`); console.log(`         ${r.detail}`); }

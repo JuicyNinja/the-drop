@@ -34,6 +34,9 @@ export interface DropRecord {
   live_until: string | null;
   redeem_from: string | null;
   redeem_until: string | null;
+  redeem_days: number[] | null;
+  redeem_time_start: string | null;
+  redeem_time_end: string | null;
   parent_drop_id: string | null;
   duplicated_from_id: string | null;
   gone_at: string | null;
@@ -42,7 +45,7 @@ export interface DropRecord {
 }
 
 export const DROP_COLUMNS =
-  "id, lane, org_id, location_id, city_id, status, title, description, terms, image_urls, quantity_total, quantity_remaining, price_cents, live_at, live_until, redeem_from, redeem_until, parent_drop_id, duplicated_from_id, gone_at, created_by, created_at";
+  "id, lane, org_id, location_id, city_id, status, title, description, terms, image_urls, quantity_total, quantity_remaining, price_cents, live_at, live_until, redeem_from, redeem_until, redeem_days, redeem_time_start, redeem_time_end, parent_drop_id, duplicated_from_id, gone_at, created_by, created_at";
 
 export async function getDrop(dropId: string): Promise<DropRecord> {
   const { data, error } = await getServiceClient().from("drops").select(DROP_COLUMNS).eq("id", dropId).maybeSingle();
@@ -71,6 +74,9 @@ export interface CreateDropInput {
   live_until?: string | null;
   redeem_from?: string | null;
   redeem_until?: string | null;
+  redeem_days?: number[] | null;
+  redeem_time_start?: string | null;
+  redeem_time_end?: string | null;
   image_urls?: string[];
 }
 
@@ -109,6 +115,9 @@ export async function createDraft(userId: string, input: CreateDropInput): Promi
       live_until: input.live_until ?? null,
       redeem_from: input.redeem_from ?? null,
       redeem_until: input.redeem_until ?? null,
+      redeem_days: input.redeem_days ?? null,
+      redeem_time_start: input.redeem_time_start ?? null,
+      redeem_time_end: input.redeem_time_end ?? null,
       created_by: userId,
     })
     .select(DROP_COLUMNS)
@@ -130,6 +139,9 @@ export interface PatchDropInput {
   live_until?: string | null;
   redeem_from?: string | null;
   redeem_until?: string | null;
+  redeem_days?: number[] | null;
+  redeem_time_start?: string | null;
+  redeem_time_end?: string | null;
   image_urls?: string[];
 }
 
@@ -147,6 +159,9 @@ export async function patchDraft(dropId: string, patch: PatchDropInput): Promise
   if (patch.live_until !== undefined) update.live_until = patch.live_until;
   if (patch.redeem_from !== undefined) update.redeem_from = patch.redeem_from;
   if (patch.redeem_until !== undefined) update.redeem_until = patch.redeem_until;
+  if (patch.redeem_days !== undefined) update.redeem_days = patch.redeem_days;
+  if (patch.redeem_time_start !== undefined) update.redeem_time_start = patch.redeem_time_start;
+  if (patch.redeem_time_end !== undefined) update.redeem_time_end = patch.redeem_time_end;
   if (patch.image_urls !== undefined) update.image_urls = patch.image_urls;
   if (Object.keys(update).length === 0) return getDrop(dropId);
   update.updated_at = new Date().toISOString();
@@ -240,6 +255,9 @@ async function cloneToDraft(source: DropRecord, userId: string, extra: { parent_
       live_until: null,
       redeem_from: null,
       redeem_until: null,
+      redeem_days: null,
+      redeem_time_start: null,
+      redeem_time_end: null,
       parent_drop_id: extra.parent_drop_id ?? null,
       duplicated_from_id: extra.duplicated_from_id ?? null,
       created_by: userId,
@@ -367,10 +385,12 @@ export async function runClose(now: Date = new Date()): Promise<{ gone: string[]
     // Same concurrency-safe pattern: conditional on status='live', returning
     // the row, so exactly one ticker closes a given drop.
     if (remaining <= 0) {
-      const { data: w } = await svc.from("drops").update({ status: "gone", gone_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", id).eq("status", "live").select("id");
+      const { data: w, error: wErr } = await svc.from("drops").update({ status: "gone", gone_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", id).eq("status", "live").select("id");
+      if (wErr) throw new Error(`close-to-gone failed for drop ${id}: ${wErr.message}`);
       if (w && w.length > 0) gone.push(id);
     } else if (windowPassed) {
-      const { data: w } = await svc.from("drops").update({ status: "expired", updated_at: now.toISOString() }).eq("id", id).eq("status", "live").select("id");
+      const { data: w, error: wErr } = await svc.from("drops").update({ status: "expired", updated_at: now.toISOString() }).eq("id", id).eq("status", "live").select("id");
+      if (wErr) throw new Error(`close-to-expired failed for drop ${id}: ${wErr.message}`);
       if (w && w.length > 0) expired.push(id);
     }
   }
