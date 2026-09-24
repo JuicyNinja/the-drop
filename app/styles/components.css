@@ -223,7 +223,11 @@
   overflow: hidden;
 }
 .card-tile-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-.card-offer {
+/* The card coupon print (§4.3). Two-class selector so it beats the base .coupon
+   treatment (48/900/0.95, written for Bricolage's width axis, which Inter lacks —
+   so it rendered full-width and cramped when a long title wrapped). Sized for
+   legible wrapping in the ~293px tile: 32px, weight 700, 1.05 leading. */
+.coupon.card-offer {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -231,7 +235,9 @@
   margin: 0;
   padding: 0 var(--s-4);
   font-size: var(--t-xl);
-  line-height: 0.98;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
