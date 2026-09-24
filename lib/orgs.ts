@@ -27,11 +27,13 @@ export interface OrgRecord {
   drops_per_cycle: number;
   drops_pooled_org_level: boolean;
   cycle_anchor_at: string;
+  billing_interval: string;
+  annual_started_at: string | null;
   created_at: string;
 }
 
 const ORG_COLUMNS =
-  "id, name, lane, status, tier, logo_url, max_locations, drops_per_cycle, drops_pooled_org_level, cycle_anchor_at, created_at";
+  "id, name, lane, status, tier, logo_url, max_locations, drops_per_cycle, drops_pooled_org_level, cycle_anchor_at, billing_interval, annual_started_at, created_at";
 
 export interface LocationRecord {
   id: string;

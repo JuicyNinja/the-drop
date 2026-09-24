@@ -188,6 +188,34 @@ async function main(): Promise<void> {
   // Enterprise limits are untouched by the catalog (arbitrary stored values).
   check("Enterprise stored limits are not derived from the catalog", (await pg.query(`select max_locations, drops_per_cycle from organizations where id=$1`, [orgBig])).rows[0].drops_per_cycle === 50, `orgBig drops_per_cycle=${(await pg.query(`select drops_per_cycle from organizations where id=$1`, [orgBig])).rows[0].drops_per_cycle}`);
 
+  // ========================================================================
+  // ANNUAL CONTRACTS + the $9/3-month intro (PRD §12.4), behind the gateway.
+  // ========================================================================
+  const orgAnnual = (await api("/v1/orgs", { method: "POST", token: owner.token, body: { name: "Annual Co", tier: "local_starter" } })).body.data.id as string;
+  // Billing surfaces the annual offer: 10× monthly ($990), intro $9×3 then annual-monthly×9; year total $769.50.
+  const bill1 = await api(`/v1/orgs/${orgAnnual}/billing`, { token: owner.token });
+  const offer = bill1.body.data?.annual_offer;
+  check("billing surfaces the annual offer: 10× monthly, $9×3 intro, year total = 9×3 + (annual/12)×9", bill1.status === 200 && bill1.body.data?.billing_interval === "monthly" && offer?.annual_price_cents === 99000 && offer?.annual_monthly_cents === 8250 && offer?.intro_monthly_cents === 900 && offer?.intro_months === 3 && offer?.year_total_cents === 76950, `interval=${bill1.body.data?.billing_interval} offer=${JSON.stringify(offer)}`);
+
+  // Switch to annual: charges the first intro month ($9), sets interval + term start.
+  const idemA = randomUUID();
+  const sw = await api(`/v1/orgs/${orgAnnual}/subscription/annual`, { method: "POST", token: owner.token, idem: idemA });
+  const orgRow = (await pg.query(`select billing_interval, annual_started_at from organizations where id=$1`, [orgAnnual])).rows[0];
+  check("POST /subscription/annual → charges $9 (first intro month), sets billing_interval=annual + term start", sw.status === 200 && sw.body.data?.billing_interval === "annual" && sw.body.data?.charged_cents === 900 && sw.body.data?.year_total_cents === 76950 && orgRow.billing_interval === "annual" && orgRow.annual_started_at !== null, `sw=${sw.status} charged=${sw.body.data?.charged_cents} total=${sw.body.data?.year_total_cents} interval=${orgRow?.billing_interval} started=${orgRow?.annual_started_at ? "set" : "null"}`);
+
+  // Idempotent: replay with the same key → same subscription, no second term.
+  const swReplay = await api(`/v1/orgs/${orgAnnual}/subscription/annual`, { method: "POST", token: owner.token, idem: idemA });
+  check("annual switch is idempotent (replay returns the same subscription, no double)", swReplay.status === 200 && swReplay.body.data?.subscription_id === sw.body.data?.subscription_id, `replay same=${swReplay.body.data?.subscription_id === sw.body.data?.subscription_id}`);
+
+  // Already annual: a fresh switch is rejected and the offer is withdrawn.
+  const swAgain = await api(`/v1/orgs/${orgAnnual}/subscription/annual`, { method: "POST", token: owner.token, idem: randomUUID() });
+  const bill2 = await api(`/v1/orgs/${orgAnnual}/billing`, { token: owner.token });
+  check("an org already on annual cannot re-switch, and the annual offer is withdrawn", swAgain.status === 422 && swAgain.body.error?.code === "VALIDATION_ERROR" && bill2.body.data?.billing_interval === "annual" && bill2.body.data?.annual_offer === null, `again=${swAgain.status} ${swAgain.body.error?.code}; offer=${bill2.body.data?.annual_offer}`);
+
+  // Enterprise is billed by contract — no self-serve annual.
+  const swEnt = await api(`/v1/orgs/${orgBig}/subscription/annual`, { method: "POST", token: adminToken, idem: randomUUID() });
+  check("Enterprise cannot self-serve annual (VALIDATION_ERROR — billed by contract)", swEnt.status === 422 && swEnt.body.error?.code === "VALIDATION_ERROR", `${swEnt.status} ${swEnt.body.error?.code}`);
+
   // NOT_IMPLEMENTED is gone from POST /v1/drops.
   const postDrop = await makeDrop(adminToken, locBig, false);
   check("POST /v1/drops no longer returns NOT_IMPLEMENTED (the WP-5 shell is gone)", postDrop.status === 201, `${postDrop.status} ${JSON.stringify(postDrop.body.error ?? "ok")}`);

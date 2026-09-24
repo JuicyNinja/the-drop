@@ -14,6 +14,13 @@ import { LogoUpload } from "./LogoUpload";
  * — the paywall fires on submit and never hides the control (gate item 2).
  */
 
+interface AnnualOffer {
+  annual_price_cents: number;
+  annual_monthly_cents: number;
+  intro_monthly_cents: number;
+  intro_months: number;
+  year_total_cents: number;
+}
 interface Billing {
   tier: string;
   max_locations: number;
@@ -21,7 +28,11 @@ interface Billing {
   drops_pooled_org_level: boolean;
   active_locations: number;
   cycle: { start: string; end: string };
+  billing_interval: "monthly" | "annual";
+  annual_offer: AnnualOffer | null;
 }
+
+const usd = (cents: number) => `$${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
 type Location = OpLocation;
 
 const tierName = (t: string) => t.replace(/^local_/, "").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -42,6 +53,8 @@ export default function AccountPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [paywall, setPaywall] = useState<{ message: string; details: AllowanceDetails } | null>(null);
+  const [annualBusy, setAnnualBusy] = useState(false);
+  const [annualNote, setAnnualNote] = useState<string | null>(null);
 
   const load = async () => {
     const [b, l] = await Promise.all([
@@ -64,6 +77,14 @@ export default function AccountPage() {
     })();
     return () => { alive = false; };
   }, [org.org_id]);
+
+  async function goAnnual() {
+    setAnnualBusy(true); setAnnualNote(null);
+    const r = await api<{ charged_cents: number }>(`/v1/orgs/${org.org_id}/subscription/annual`, { method: "POST", idem: crypto.randomUUID() });
+    setAnnualBusy(false);
+    if (r.ok && r.data) { setAnnualNote(`You're on an annual contract. First charge: ${usd(r.data.charged_cents)}.`); void load(); return; }
+    setAnnualNote(r.error?.message ?? "Could not switch to annual.");
+  }
 
   async function addLocation() {
     setErr(null); setPaywall(null);
@@ -100,7 +121,17 @@ export default function AccountPage() {
             <div><span className="op-stat-label">Locations</span><p className="op-billing-val data">{billing.active_locations} / {billing.max_locations}</p></div>
             <div><span className="op-stat-label">Allowance</span><p className="op-billing-val">{billing.drops_pooled_org_level ? "Pooled org-wide" : "Per location"}</p></div>
             <div><span className="op-stat-label">Cycle</span><p className="op-billing-val">{date(billing.cycle.start)} – {date(billing.cycle.end)}</p></div>
+            <div><span className="op-stat-label">Billing</span><p className="op-billing-val">{billing.billing_interval === "annual" ? "Annual" : "Monthly"}</p></div>
           </div>
+          {billing.annual_offer && (
+            <div className="op-annual-offer">
+              <p className="op-annual-pitch">
+                Go annual — <strong>{usd(billing.annual_offer.intro_monthly_cents)}/mo for {billing.annual_offer.intro_months} months</strong>, then {usd(billing.annual_offer.annual_monthly_cents)}/mo. Two months free versus monthly; {usd(billing.annual_offer.year_total_cents)} the first year.
+              </p>
+              <button className="btn-catch" disabled={annualBusy} onClick={() => void goAnnual()}>Switch to annual</button>
+            </div>
+          )}
+          {annualNote && <p className="op-annual-note">{annualNote}</p>}
         </div>
       )}
 

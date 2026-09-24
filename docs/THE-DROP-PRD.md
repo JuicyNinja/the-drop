@@ -664,15 +664,17 @@ Tiers gate on **drops per month** — a real platform cost (board inventory and 
 
 ### 12.2 Local Drop pricing
 
-| Tier | Allowance | Price |
-|---|---|---|
-| Local Starter | 2 drops/month **per location** | $99 |
-| Local Limited | 8 drops/month **per location** | $149 |
-| Local Boss | 12 drops/month **per location** (≈3/week) | $199 |
-| Local Superstar | Up to **8 locations**, 64 drops/month **pooled across all locations** | $795 |
-| Enterprise | 8+ locations or 64+ drops. Custom limits. | **Call for pricing** |
+| Tier | Allowance | Monthly | Annual (10×, two months free) |
+|---|---|---|---|
+| Local Starter | 2 drops/month **per location** | $99 | $990 |
+| Local Limited | 8 drops/month **per location** | $149 | $1,490 |
+| Local Boss | 12 drops/month **per location** (≈3/week) | $199 | $1,990 |
+| Local Superstar | Up to **8 locations**, 64 drops/month **pooled across all locations** | $795 | $7,950 |
+| Enterprise | 8+ locations or 64+ drops. Custom limits. | **Call for pricing** | **Call for pricing** |
 
 **Ladder rationale:** Starter matches observed entry behavior (2–4 drops/month), so a new merchant never stares at unused capacity — the most common cause of first-cycle cancellation. Boss is anchored on three drops per week, which is how a merchant actually thinks about dead hours (Tuesday, Wednesday, Thursday afternoons), not on abstract volume.
+
+**Annual rationale:** annual is billed at **10× the monthly rate — two months free**. Subscription is the only revenue, so cash timing and churn retention are the whole business: an annual contract collects twelve months up front and removes eleven monthly churn decisions, which is worth two months. Priced at 12× it would read as "no reason to go annual," and few would take it.
 
 **Superstar pooling:** the 64-drop allowance is an **Organization-level counter**, not per-location. The UI MUST display the shared balance. This is different plumbing from the lower tiers, which are location-level counters.
 
@@ -689,7 +691,9 @@ Tier 1 is a try-it on-ramp priced below the recurring entry tier.
 
 ### 12.4 Introductory offer
 
-$9 for 3 months on annual contracts. Applies on top of any tier.
+**$9/month for the first three months of an annual contract, then the annual monthly rate for the remaining nine.** Applies on top of any tier. One twelve-month term. The annual monthly rate is the annual price ÷ 12 — for Starter, $990 ÷ 12 = $82.50, so the first year is $9 × 3 + $82.50 × 9 = **$769.50**.
+
+The intro lives **inside** the term. It is deliberately *not* $27 up front followed by a $990 charge, and *not* a three-month trial followed by a fresh annual contract. A cliff or a renewal decision at month four — with a full year still ahead — is exactly where merchants cancel. Inside the term, month four is a billing change, not a decision: nobody has to sign anything, and the merchant is committed for twelve either way. The incentive acquires the merchant who will stay, not the one shopping for free.
 
 ### 12.5 Cycle
 

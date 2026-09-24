@@ -102,5 +102,18 @@ export const billingResponseSchema = z
     drops_pooled_org_level: z.boolean(),
     active_locations: z.number(),
     cycle: z.object({ start: z.string(), end: z.string() }),
+    billing_interval: z.enum(["monthly", "annual"]),
+    // The annual contract offer for the current tier ($9/3-month intro then the
+    // annual monthly rate). null when the org is already annual or the tier has
+    // no self-serve annual price (enterprise).
+    annual_offer: z
+      .object({
+        annual_price_cents: z.number(),
+        annual_monthly_cents: z.number(),
+        intro_monthly_cents: z.number(),
+        intro_months: z.number(),
+        year_total_cents: z.number(),
+      })
+      .nullable(),
   })
   .openapi("Billing");

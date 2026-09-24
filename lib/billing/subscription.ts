@@ -23,18 +23,38 @@ export interface UpgradeResult {
   charged_cents: number;
 }
 
+/** Switch to an annual contract (PRD §12.4). The intro charges $9/mo for three
+ *  months, then the annual monthly rate for nine — one twelve-month term. */
+export interface AnnualSubscribeRequest {
+  orgId: string;
+  tier: string;
+  annualPriceCents: number;
+  annualMonthlyCents: number;
+  introMonthlyCents: number;
+  introMonths: number;
+}
+
 export interface SubscriptionGateway {
   readonly kind: "dev" | "stripe";
   upgrade(req: UpgradeRequest): Promise<UpgradeResult>;
+  subscribeAnnual(req: AnnualSubscribeRequest): Promise<UpgradeResult>;
 }
 
-/** Dev gateway: grants the upgrade with no network call. */
+/** Dev gateway: grants the upgrade/annual switch with no network call. */
 export class DevSubscriptionGateway implements SubscriptionGateway {
   readonly kind = "dev" as const;
   async upgrade(req: UpgradeRequest): Promise<UpgradeResult> {
     return {
       subscription_id: `dev_sub_${req.orgId.slice(0, 8)}_${req.toTier}`,
       charged_cents: req.proratedCents,
+    };
+  }
+  async subscribeAnnual(req: AnnualSubscribeRequest): Promise<UpgradeResult> {
+    // Charges the first intro month ($9) now; the rest of the schedule (intro
+    // then the annual monthly rate) is what the real provider sets up.
+    return {
+      subscription_id: `dev_sub_${req.orgId.slice(0, 8)}_${req.tier}_annual`,
+      charged_cents: req.introMonthlyCents,
     };
   }
 }
@@ -49,6 +69,13 @@ export class StripeSubscriptionGateway implements SubscriptionGateway {
     // WP-16: create/swap the Stripe subscription item with
     // proration_behavior=always_invoice; the webhook confirms the charge.
     throw new Error("StripeSubscriptionGateway.upgrade is not implemented yet (WP-16).");
+  }
+  async subscribeAnnual(req: AnnualSubscribeRequest): Promise<UpgradeResult> {
+    void this.secretKey;
+    void req;
+    // WP-16: an annual Stripe subscription with a 3-month $9 intro phase then the
+    // annual monthly rate; the webhook confirms each charge.
+    throw new Error("StripeSubscriptionGateway.subscribeAnnual is not implemented yet (WP-16).");
   }
 }
 

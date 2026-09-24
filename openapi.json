@@ -4473,6 +4473,43 @@
               "start",
               "end"
             ]
+          },
+          "billing_interval": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "annual"
+            ]
+          },
+          "annual_offer": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "annual_price_cents": {
+                "type": "number"
+              },
+              "annual_monthly_cents": {
+                "type": "number"
+              },
+              "intro_monthly_cents": {
+                "type": "number"
+              },
+              "intro_months": {
+                "type": "number"
+              },
+              "year_total_cents": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "annual_price_cents",
+              "annual_monthly_cents",
+              "intro_monthly_cents",
+              "intro_months",
+              "year_total_cents"
+            ]
           }
         },
         "required": [
@@ -4481,7 +4518,9 @@
           "drops_per_cycle",
           "drops_pooled_org_level",
           "active_locations",
-          "cycle"
+          "cycle",
+          "billing_interval",
+          "annual_offer"
         ]
       },
       "listOrgDropsResponse": {
@@ -5135,6 +5174,69 @@
           "location_id"
         ],
         "additionalProperties": false
+      },
+      "switchToAnnualResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "subscription_id": {
+                "type": "string"
+              },
+              "charged_cents": {
+                "type": "number"
+              },
+              "billing_interval": {
+                "type": "string",
+                "enum": [
+                  "annual"
+                ]
+              },
+              "tier": {
+                "type": "string"
+              },
+              "annual_price_cents": {
+                "type": "number"
+              },
+              "annual_monthly_cents": {
+                "type": "number"
+              },
+              "intro_monthly_cents": {
+                "type": "number"
+              },
+              "intro_months": {
+                "type": "number"
+              },
+              "year_total_cents": {
+                "type": "number"
+              },
+              "annual_started_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "subscription_id",
+              "charged_cents",
+              "billing_interval",
+              "tier",
+              "annual_price_cents",
+              "annual_monthly_cents",
+              "intro_monthly_cents",
+              "intro_months",
+              "year_total_cents",
+              "annual_started_at"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
       },
       "upgradeSubscriptionResponse": {
         "type": "object",
@@ -14466,6 +14568,130 @@
           },
           "422": {
             "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error. code: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/subscription/annual": {
+      "post": {
+        "operationId": "switchToAnnual",
+        "summary": "Switch to an annual contract (with the $9/3-month intro)",
+        "tags": [
+          "Merchant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "ios",
+                "android"
+              ],
+              "description": "Calling client. Telemetry and capability gating."
+            },
+            "required": true,
+            "description": "Calling client. Telemetry and capability gating.",
+            "name": "X-Client",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+              "description": "Client version, semver.",
+              "example": "1.0.0"
+            },
+            "required": true,
+            "description": "Client version, semver.",
+            "name": "X-Client-Version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/switchToAnnualResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. code: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. code: ACCOUNT_SUSPENDED | FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. code: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. code: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error. code: RATE_LIMITED",
             "content": {
               "application/json": {
                 "schema": {

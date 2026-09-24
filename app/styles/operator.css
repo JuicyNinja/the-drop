@@ -186,3 +186,8 @@
 .op-bulk-label { margin: 0; min-width: 84px; }
 .op-bulk input[type="datetime-local"] { width: auto; min-width: 220px; }
 .op-bulk .btn-catch, .op-bulk .btn-secondary { min-height: 36px; padding: 0 var(--s-4); }
+
+/* ===================== ANNUAL OFFER (PRD §12.4) ======================= */
+.op-annual-offer { margin-top: var(--s-4); padding: var(--s-4); background: var(--secondary-soft); border-radius: var(--r-md); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.op-annual-pitch { margin: 0; font-size: var(--t-sm); color: var(--text-primary); max-width: 60ch; }
+.op-annual-note { margin: var(--s-3) 0 0; font-size: var(--t-sm); color: var(--text-secondary); }
