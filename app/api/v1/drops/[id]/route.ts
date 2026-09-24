@@ -71,6 +71,7 @@ const publicDropSchema = z.object({
     name: z.string(),
     logo_url: z.string().nullable(),
     redemption_rate: z.number().nullable(),
+    cohort_median: z.number().nullable(),
     location: z.object({ name: z.string(), city: z.string(), lat: z.number(), lng: z.number() }).nullable(),
   }),
   can_catch: z.boolean(),

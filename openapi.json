@@ -2324,13 +2324,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -2432,13 +2439,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -2540,13 +2554,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -2648,13 +2669,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -2767,13 +2795,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -2875,13 +2910,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -2983,13 +3025,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -3091,13 +3140,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -3210,13 +3266,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -3318,13 +3381,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -3426,13 +3496,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -3534,13 +3611,20 @@
                                 "number",
                                 "null"
                               ]
+                            },
+                            "cohort_median": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "org_id",
                             "name",
                             "logo_url",
-                            "redemption_rate"
+                            "redemption_rate",
+                            "cohort_median"
                           ]
                         }
                       },
@@ -4114,6 +4198,12 @@
                       "null"
                     ]
                   },
+                  "cohort_median": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
                   "location": {
                     "type": [
                       "object",
@@ -4146,6 +4236,7 @@
                   "name",
                   "logo_url",
                   "redemption_rate",
+                  "cohort_median",
                   "location"
                 ]
               },

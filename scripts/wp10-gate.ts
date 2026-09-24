@@ -287,6 +287,14 @@ async function main(): Promise<void> {
   const org2Rate = Number((await pg.query(`select redemption_rate from merchant_scores where org_id=$1`, [org2])).rows[0]?.redemption_rate ?? -1);
   const cohortMedian = ms1.body.data?.cohort_median;
   check("merchant score: a new merchant (no catches) is seeded at the cohort median", ms1.status === 200 && cohortMedian !== null && Math.abs(org2Rate - Number(cohortMedian)) < 1e-6, `cohort_median=${cohortMedian}; org2 redemption_rate=${org2Rate}`);
+
+  // The cohort median is now STORED (one platform-wide value per run), so a bare
+  // "87% redeemed" can be shown in context as "typical is 64%".
+  const storedMedians = (await pg.query(`select distinct cohort_median from merchant_scores where cohort_median is not null`)).rows.map((r: any) => Number(r.cohort_median));
+  check("the cohort median is stored on merchant_scores (single platform-wide value), not just returned", storedMedians.length === 1 && Math.abs(storedMedians[0] - Number(cohortMedian)) < 1e-6, `distinct stored cohort_medians=${JSON.stringify(storedMedians)}; recompute returned ${cohortMedian}`);
+  // …and it reaches the client: the drop detail DTO carries it, so the card/detail can render "typical X%".
+  const detailCM = await api(`/v1/drops/${drop}`, { token: A.token });
+  check("the drop detail DTO surfaces cohort_median, so the rate reads in context ('typical X%')", detailCM.status === 200 && detailCM.body.data?.merchant?.cohort_median !== null && Math.abs(Number(detailCM.body.data?.merchant?.cohort_median) - Number(cohortMedian)) < 1e-6, `detail cohort_median=${detailCM.body.data?.merchant?.cohort_median} vs recompute ${cohortMedian}`);
   const ms2 = await api("/v1/admin/merchant-scores/recompute", { method: "POST", token: admin });
   const org2Rate2 = Number((await pg.query(`select redemption_rate from merchant_scores where org_id=$1`, [org2])).rows[0]?.redemption_rate ?? -1);
   check("merchant score recompute is deterministic (same day → same score)", ms2.status === 200 && org2Rate === org2Rate2, `run1=${org2Rate} run2=${org2Rate2}`);

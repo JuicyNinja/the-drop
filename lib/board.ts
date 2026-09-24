@@ -55,7 +55,7 @@ export interface DropCard {
   status: string;
   ground_dark: boolean; // group ground is a dark color → coupon print is white (§4.3)
   ground_slug: string; // group ground slug → logo monogram fallback color (§4.2)
-  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null };
+  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; cohort_median: number | null };
 }
 
 export interface BoardResult {
@@ -274,14 +274,18 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
   // redemption_rate per org (displayed only; never ranks).
   const orgIds = [...new Set(live.map((d) => d.org_id))];
   const rateByOrg = new Map<string, number | null>();
+  let cohortMedian: number | null = null; // platform-wide typical redemption rate (same on every score row)
   const nameByOrg = new Map<string, string>();
   const logoByOrg = new Map<string, string | null>(); // merchant logo mark, beside the name (§4.2)
   const groundDarkByOrg = new Map<string, boolean>(); // group ground luminance → coupon ink/white (§4.3)
   const groundSlugByOrg = new Map<string, string>(); // group ground slug → logo monogram color (§4.2)
   if (orgIds.length > 0) {
-    const { data: scores, error: scoresErr } = await svc.from("merchant_scores").select("org_id, redemption_rate").in("org_id", orgIds);
+    const { data: scores, error: scoresErr } = await svc.from("merchant_scores").select("org_id, redemption_rate, cohort_median").in("org_id", orgIds);
     if (scoresErr) throw new Error(`board merchant scores failed: ${scoresErr.message}`);
-    for (const s of scores ?? []) rateByOrg.set(s.org_id as string, (s.redemption_rate as number | null) ?? null);
+    for (const s of scores ?? []) {
+      rateByOrg.set(s.org_id as string, (s.redemption_rate as number | null) ?? null);
+      if (cohortMedian === null && s.cohort_median != null) cohortMedian = s.cohort_median as number;
+    }
     const { data: orgs, error: orgsErr } = await svc.from("organizations").select("id, name, logo_url").in("id", orgIds);
     if (orgsErr) throw new Error(`board orgs load failed: ${orgsErr.message}`);
     for (const o of orgs ?? []) { nameByOrg.set(o.id as string, o.name as string); logoByOrg.set(o.id as string, (o.logo_url as string | null) ?? null); }
@@ -294,7 +298,7 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
     price_cents: d.price_cents, live_until: d.live_until, redeem_until: d.redeem_until, redeem_window: formatRedeemWindow(windowOf(d), tz), status: d.status,
     ground_dark: groundDarkByOrg.get(d.org_id) ?? true,
     ground_slug: groundSlugByOrg.get(d.org_id) ?? "bone",
-    merchant: { org_id: d.org_id, name: nameByOrg.get(d.org_id) ?? "", logo_url: logoByOrg.get(d.org_id) ?? null, redemption_rate: rateByOrg.get(d.org_id) ?? null },
+    merchant: { org_id: d.org_id, name: nameByOrg.get(d.org_id) ?? "", logo_url: logoByOrg.get(d.org_id) ?? null, redemption_rate: rateByOrg.get(d.org_id) ?? null, cohort_median: cohortMedian },
   });
 
   const byRecency = (a: LiveDropRow, b: LiveDropRow) => new Date(b.live_at ?? 0).getTime() - new Date(a.live_at ?? 0).getTime();
@@ -362,7 +366,7 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
       }), tz), status: d.status as string,
       ground_dark: groundDarkByOrg.get(d.org_id as string) ?? true,
       ground_slug: groundSlugByOrg.get(d.org_id as string) ?? "bone",
-      merchant: { org_id: d.org_id as string, name: nameByOrg.get(d.org_id as string) ?? "", logo_url: logoByOrg.get(d.org_id as string) ?? null, redemption_rate: rateByOrg.get(d.org_id as string) ?? null },
+      merchant: { org_id: d.org_id as string, name: nameByOrg.get(d.org_id as string) ?? "", logo_url: logoByOrg.get(d.org_id as string) ?? null, redemption_rate: rateByOrg.get(d.org_id as string) ?? null, cohort_median: cohortMedian },
     });
   }
 
@@ -380,7 +384,7 @@ export interface PublicDrop {
   redeem_window: string;
   status: string;
   ground_slug: string; // group ground slug → logo monogram fallback color (§4.2)
-  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; location: { name: string; city: string; lat: number; lng: number } | null };
+  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; cohort_median: number | null; location: { name: string; city: string; lat: number; lng: number } | null };
   can_catch: boolean;
   catch_blocked_reason: string | null;
 }
@@ -405,9 +409,11 @@ export async function getPublicDrop(dropId: string, viewerUserId: string | null)
   const qr = d.quantity_remaining as number;
 
   let redemptionRate: number | null = null;
-  const { data: ms, error: msErr } = await svc.from("merchant_scores").select("redemption_rate").eq("org_id", d.org_id as string).maybeSingle();
+  let cohortMedian: number | null = null;
+  const { data: ms, error: msErr } = await svc.from("merchant_scores").select("redemption_rate, cohort_median").eq("org_id", d.org_id as string).maybeSingle();
   if (msErr) throw new Error(`public drop merchant score failed: ${msErr.message}`);
   redemptionRate = (ms?.redemption_rate as number | null) ?? null;
+  cohortMedian = (ms?.cohort_median as number | null) ?? null;
 
   // Group ground slug for the logo monogram fallback (§4.2).
   const gslug = new Map<string, string>();
@@ -441,7 +447,7 @@ export async function getPublicDrop(dropId: string, viewerUserId: string | null)
     status: d.status as string,
     ground_slug: gslug.get(d.org_id as string) ?? "bone",
     merchant: {
-      org_id: d.org_id as string, name: org?.name ?? "", logo_url: org?.logo_url ?? null, redemption_rate: redemptionRate,
+      org_id: d.org_id as string, name: org?.name ?? "", logo_url: org?.logo_url ?? null, redemption_rate: redemptionRate, cohort_median: cohortMedian,
       location: loc ? { name: loc.name, city: loc.city, lat: Number(loc.lat), lng: Number(loc.lng) } : null,
     },
     can_catch: canCatch,

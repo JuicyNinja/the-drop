@@ -92,6 +92,9 @@ export async function recomputeMerchantScores(now: Date = new Date()): Promise<M
       redemption_rate: Number((r.rate ?? cohortMedian ?? 0).toFixed(4)),
       whisper_score: r.whisper === null ? null : Number(r.whisper.toFixed(4)),
       drops_counted: r.dropsCounted,
+      // Store the cohort median so the rate can be shown in context ("typical is
+      // 64%"). Same platform-wide value on every row for this run.
+      cohort_median: cohortMedian === null ? null : Number(cohortMedian.toFixed(4)),
       computed_at: now.toISOString(),
     };
   });

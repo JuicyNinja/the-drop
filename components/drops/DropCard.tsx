@@ -24,7 +24,7 @@ export interface BoardCard {
   status: string;
   ground_dark: boolean;
   ground_slug: string;
-  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null };
+  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; cohort_median: number | null };
 }
 
 /**
@@ -87,7 +87,12 @@ export function DropCard({ card, freshArrival = false }: { card: BoardCard; fres
                 <span className="score-bar" aria-hidden>
                   <span className={`score-fill wq-${Math.round((card.merchant.redemption_rate ?? 0) * 20) * 5}`} />
                 </span>
-                <span className="score-label">{Math.round((card.merchant.redemption_rate ?? 0) * 100)}% redeemed</span>
+                <span className="score-label">
+                  {Math.round((card.merchant.redemption_rate ?? 0) * 100)}% redeemed
+                  {card.merchant.cohort_median !== null && (
+                    <span className="score-typical"> · typical {Math.round(card.merchant.cohort_median * 100)}%</span>
+                  )}
+                </span>
               </span>
             )}
           </div>

@@ -25,7 +25,7 @@ const dropCardSchema = z.object({
   status: z.string(),
   ground_dark: z.boolean(),
   ground_slug: z.string(),
-  merchant: z.object({ org_id: z.string(), name: z.string(), logo_url: z.string().nullable(), redemption_rate: z.number().nullable() }),
+  merchant: z.object({ org_id: z.string(), name: z.string(), logo_url: z.string().nullable(), redemption_rate: z.number().nullable(), cohort_median: z.number().nullable() }),
 });
 const laneSchema = z.object({ on_fire: z.array(dropCardSchema), new: z.array(dropCardSchema), gone: z.array(dropCardSchema), ending_soon: z.array(dropCardSchema) });
 

@@ -883,3 +883,6 @@
 .chip-ground-blush  { background: var(--g-blush);  color: var(--ink); }
 .chip-ground-mint   { background: var(--g-mint);   color: var(--ink); }
 .chip-ground-bone   { background: var(--g-bone);   color: var(--ink); }
+
+/* cohort comparison on the merchant score ("87% redeemed · typical 64%") */
+.score-typical, .fact-typical { color: var(--text-tertiary); font-weight: 400; }

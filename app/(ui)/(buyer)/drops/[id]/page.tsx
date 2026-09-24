@@ -17,7 +17,7 @@ interface PublicDrop {
   redeem_window: string;
   status: string;
   ground_slug: string;
-  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; location: { name: string; city: string; lat: number; lng: number } | null };
+  merchant: { org_id: string; name: string; logo_url: string | null; redemption_rate: number | null; cohort_median: number | null; location: { name: string; city: string; lat: number; lng: number } | null };
   can_catch: boolean; catch_blocked_reason: string | null;
 }
 interface CatchResult { catch_id: string; position_number: number; code: string }
@@ -136,7 +136,7 @@ export default function DropPage() {
         <dl className="detail-facts">
           {drop.merchant.location && <div><dt>Where</dt><dd>{drop.merchant.location.name}, {drop.merchant.location.city}</dd></div>}
           {drop.redeem_window && <div><dt>Window</dt><dd>{drop.redeem_window}</dd></div>}
-          {drop.merchant.redemption_rate !== null && <div><dt>Redeemed</dt><dd className="data">{Math.round((drop.merchant.redemption_rate ?? 0) * 100)}%</dd></div>}
+          {drop.merchant.redemption_rate !== null && <div><dt>Redeemed</dt><dd className="data">{Math.round((drop.merchant.redemption_rate ?? 0) * 100)}%{drop.merchant.cohort_median !== null && <span className="fact-typical"> · typical {Math.round(drop.merchant.cohort_median * 100)}%</span>}</dd></div>}
         </dl>
 
         <FollowButton orgId={drop.merchant.org_id} />
