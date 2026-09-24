@@ -2568,12 +2568,121 @@
                         "merchant"
                       ]
                     }
+                  },
+                  "ending_soon": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_window": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "logo_url",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "redeem_window",
+                        "status",
+                        "ground_dark",
+                        "ground_slug",
+                        "merchant"
+                      ]
+                    }
                   }
                 },
                 "required": [
                   "on_fire",
                   "new",
-                  "gone"
+                  "gone",
+                  "ending_soon"
                 ]
               },
               "maker": {
@@ -2902,12 +3011,121 @@
                         "merchant"
                       ]
                     }
+                  },
+                  "ending_soon": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_window": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "logo_url",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "redeem_window",
+                        "status",
+                        "ground_dark",
+                        "ground_slug",
+                        "merchant"
+                      ]
+                    }
                   }
                 },
                 "required": [
                   "on_fire",
                   "new",
-                  "gone"
+                  "gone",
+                  "ending_soon"
                 ]
               },
               "digital": {
@@ -3236,12 +3454,121 @@
                         "merchant"
                       ]
                     }
+                  },
+                  "ending_soon": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lane": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "image_url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity_total": {
+                          "type": "number"
+                        },
+                        "quantity_remaining": {
+                          "type": "number"
+                        },
+                        "pct_remaining": {
+                          "type": "number"
+                        },
+                        "price_cents": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "live_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_until": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "redeem_window": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "ground_dark": {
+                          "type": "boolean"
+                        },
+                        "ground_slug": {
+                          "type": "string"
+                        },
+                        "merchant": {
+                          "type": "object",
+                          "properties": {
+                            "org_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "logo_url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "redemption_rate": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "org_id",
+                            "name",
+                            "logo_url",
+                            "redemption_rate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "lane",
+                        "title",
+                        "image_url",
+                        "quantity_total",
+                        "quantity_remaining",
+                        "pct_remaining",
+                        "price_cents",
+                        "live_until",
+                        "redeem_until",
+                        "redeem_window",
+                        "status",
+                        "ground_dark",
+                        "ground_slug",
+                        "merchant"
+                      ]
+                    }
                   }
                 },
                 "required": [
                   "on_fire",
                   "new",
-                  "gone"
+                  "gone",
+                  "ending_soon"
                 ]
               }
             },

@@ -59,7 +59,7 @@ export interface DropCard {
 }
 
 export interface BoardResult {
-  data: Record<string, { on_fire: DropCard[]; new: DropCard[]; gone: DropCard[] }>;
+  data: Record<string, { on_fire: DropCard[]; new: DropCard[]; gone: DropCard[]; ending_soon: DropCard[] }>;
   meta: { city_id: string | null; cold_start: boolean; ranking: string };
 }
 
@@ -234,8 +234,8 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
   }
 
   // Live drops in the city, with pressure + location coords. No city → no board.
-  const data: Record<string, { on_fire: DropCard[]; new: DropCard[]; gone: DropCard[] }> = {
-    local: { on_fire: [], new: [], gone: [] }, maker: { on_fire: [], new: [], gone: [] }, digital: { on_fire: [], new: [], gone: [] },
+  const data: Record<string, { on_fire: DropCard[]; new: DropCard[]; gone: DropCard[]; ending_soon: DropCard[] }> = {
+    local: { on_fire: [], new: [], gone: [], ending_soon: [] }, maker: { on_fire: [], new: [], gone: [], ending_soon: [] }, digital: { on_fire: [], new: [], gone: [], ending_soon: [] },
   };
   if (!cityId) return { data, meta: { city_id: null, cold_start: true, ranking: "proximity_fallback" } };
   const tz = await cityTimezone(svc, cityId); // all board drops share the viewer's city tz
@@ -316,7 +316,11 @@ export async function getBoard(userId: string, opts: BoardOptions = {}): Promise
     else if (cold) onFireSort = lane === "local" ? byDistance : byRecency;
     const onFire = [...laneDrops].sort(onFireSort).slice(0, PER_LANE).map(toCard);
     const fresh = [...laneDrops].sort(byRecency).slice(0, PER_LANE).map(toCard);
-    data[lane] = { on_fire: onFire, new: fresh, gone: [] };
+    // Ending Soon lane (PRD §10.2): the standing "about to disappear" view — drops
+    // with a defined redemption close, soonest first. A permanent lane, not the
+    // buried `ending` sort, because a buyer with no specific need is moved by it.
+    const endingSoon = [...laneDrops].filter((d) => d.redeem_until).sort(byEnding).slice(0, PER_LANE).map(toCard);
+    data[lane] = { on_fire: onFire, new: fresh, gone: [], ending_soon: endingSoon };
   }
 
   // Recently-Gone drops stay on the board for 5 minutes (DESIGN-SYSTEM §4.9),

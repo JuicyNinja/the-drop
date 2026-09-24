@@ -7,7 +7,7 @@ import { DropCard, type BoardCard } from "@/components/drops/DropCard";
 import { BoardFilter, type BoardSort, type RedeemFilter } from "@/app/(ui)/(buyer)/_lib/BoardFilter";
 import { CategoryChips } from "@/app/(ui)/(buyer)/_lib/CategoryChips";
 
-interface Lane { on_fire: BoardCard[]; new: BoardCard[]; gone: BoardCard[] }
+interface Lane { on_fire: BoardCard[]; new: BoardCard[]; gone: BoardCard[]; ending_soon: BoardCard[] }
 interface Board { local: Lane; maker: Lane; digital: Lane }
 
 function isFresh(c: BoardCard): boolean {
@@ -74,7 +74,8 @@ function BoardView() {
   const onFire = local.on_fire;
   const fresh = local.new;
   const gone = local.gone;
-  const nothing = onFire.length === 0 && fresh.length === 0 && gone.length === 0;
+  const endingSoon = local.ending_soon;
+  const nothing = onFire.length === 0 && fresh.length === 0 && gone.length === 0 && endingSoon.length === 0;
 
   return (
     <div className="board-hall">
@@ -93,6 +94,13 @@ function BoardView() {
         <>
           <h2 className="board-lane-label">On fire</h2>
           <Grid cards={onFire} fresh />
+        </>
+      )}
+
+      {endingSoon.length > 0 && (
+        <>
+          <h2 className="board-lane-label">Ending soon</h2>
+          <Grid cards={endingSoon} />
         </>
       )}
 

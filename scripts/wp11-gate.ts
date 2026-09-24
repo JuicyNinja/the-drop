@@ -313,6 +313,27 @@ async function main(): Promise<void> {
     `new city: cold_start=${coldBoard1.body.meta?.cold_start} ranking=${coldBoard1.body.meta?.ranking}; after 2 events: cold_start=${coldBoard2.body.meta?.cold_start} ranking=${coldBoard2.body.meta?.ranking}`,
   );
 
+  // ========================================================================
+  // Ending Soon LANE (PRD §10.2): a standing board lane, ordered by soonest
+  // redemption close (redeem_until asc) — not the buried `ending` sort. It is
+  // reachable in the default /v1/board response, so a browsing buyer meets it.
+  // ========================================================================
+  const nowMs = Date.now();
+  const mkEnding = async (untilMs: number, tag: string) =>
+    (await api("/v1/drops", { method: "POST", token: ownerA.token, body: { location_id: A.loc, title: `Ends ${tag}`, description: "d", quantity_total: 5, live_at: iso(-2000), live_until: iso(30 * 864e5), redeem_from: iso(-1000), redeem_until: new Date(nowMs + untilMs).toISOString(), publish: true } })).body.data.id;
+  const dSoon = await mkEnding(2 * 36e5, "soon"); // +2h
+  const dMid = await mkEnding(2 * 864e5, "mid"); //  +2d
+  const dLate = await mkEnding(5 * 864e5, "late"); // +5d
+  await api("/v1/admin/scheduler/tick", { method: "POST", token: admin });
+  const esLane = ((await api("/v1/board", { token: buyer.token })).body.data?.local?.ending_soon ?? []) as any[];
+  const esIds = esLane.map((c) => c.id);
+  const iSoon = esIds.indexOf(dSoon), iMid = esIds.indexOf(dMid), iLate = esIds.indexOf(dLate);
+  check(
+    "Ending Soon is its own board lane in the default response, ordered by soonest close (redeem_until asc)",
+    iSoon >= 0 && iMid >= 0 && iLate >= 0 && iSoon < iMid && iMid < iLate,
+    `ending_soon order: soon@${iSoon} < mid@${iMid} < late@${iLate} (lane size ${esIds.length})`,
+  );
+
   await pg.end();
   console.log("\nWP-11 board / ranking / realtime / filter gate against " + BASE + "\n");
   for (const r of results) { console.log(`  [${r.pass ? "PASS" : "FAIL"}] ${r.name}`); console.log(`         ${r.detail}`); }
