@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- dev demo-seed harness */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { Client } from "pg";
 import { Redis } from "@upstash/redis";
+import sharp from "sharp";
+import { tileWeight } from "../lib/tile-weight";
+import { subjectFor, groundFor, comboSlug } from "./drop-tile-map";
 
 /** A merchant's stable logo slug — keys the generated mark at
  *  public/tiles/logos/<slug>.webp (org ids are per-seed, so never key on them). */
@@ -330,6 +333,37 @@ async function main(): Promise<void> {
   // 10. Real clout recompute → tiers + percentiles per city.
   await api("/v1/admin/clout/recompute", { method: "POST", token: admin });
 
+  // 11. Drop tiles (§15). Wire EVERY drop to its committed combo tile
+  //     (subject × ground × weight) so a reseed produces a complete board with no
+  //     manual step. The 33 canonical combo tiles live in public/tiles/drops/_gen/;
+  //     the per-drop file is derived — mirrored for right-weighted drops (§15.5),
+  //     keyed by the run's random drop id, and gitignored (regenerated each seed).
+  const genDir = join(process.cwd(), "public", "tiles", "drops", "_gen");
+  const dropDir = join(process.cwd(), "public", "tiles", "drops");
+  const tileRows = (await q(
+    `select distinct on (d.id) d.id, d.title, gp.slug gslug
+       from drops d
+       join org_tags ot on ot.org_id = d.org_id
+       join tags leaf on leaf.id = ot.tag_id
+       join tags gp on gp.id = leaf.parent_id
+      where d.city_id = $1
+      order by d.id`,
+    [slc],
+  )).rows as { id: string; title: string; gslug: string }[];
+  let tiled = 0, tmiss = 0;
+  for (const r of tileRows) {
+    const src = join(genDir, `${comboSlug(subjectFor(r.title), groundFor(r.gslug))}.webp`);
+    if (!existsSync(src)) { tmiss++; continue; }
+    const buf = readFileSync(src);
+    const out = tileWeight(r.id) === "right" ? await sharp(buf).flop().webp({ quality: 82 }).toBuffer() : buf;
+    writeFileSync(join(dropDir, `${r.id}.webp`), out);
+    await q(`update drops set image_urls = $2 where id = $1`, [r.id, [`/tiles/drops/${r.id}.webp`]]);
+    tiled++;
+  }
+  // Keep the Gone lane visible on a fresh seed: refresh gone drops into the board's
+  // 5-minute window so a demo viewer sees a Gone card without any manual flip.
+  await q(`update drops set gone_at = now() where status = 'gone' and city_id = $1`, [slc]);
+
   // ---- report ----
   const cnt = async (sql: string, p: any[] = []) => Number((await q(sql, p)).rows[0].n);
   const byState = (await q(`select status, count(*)::int n from drops group by status order by n desc`)).rows;
@@ -363,7 +397,7 @@ async function main(): Promise<void> {
   console.log(`\nDEMO OWNER  ${DEMO_OWNER_EMAIL}   (handle kimoto — owns ${demoOwnerOrg.m.name}, ${demoOwnerOrg.m.tier}; ${ownerLive} live drops, ${ownerWhispers} whispers received, allowance used ${usage}/${LIMITS[demoOwnerOrg.m.tier][1]} per location)`);
   console.log(`DEMO BUYER  ${DEMO_BUYER_EMAIL}   (handle parleyp — clout tier ${demoClout?.tier}, 3 saved addresses, follows+fanatics)`);
   console.log(`Dev sign-in is passwordless: type the email on the sign-in screen.\n`);
-  console.log(`Drop tiles: NOT generated yet (deferred for mix review).`);
+  console.log(`Drop tiles: wired ${tiled} drops to §15 combo tiles${tmiss ? ` (${tmiss} missing combo)` : ""} — subject × ground × weight, no manual step.`);
   await pg.end();
 }
 main().catch((e) => { console.error(e instanceof Error ? e.stack : e); process.exit(1); });
